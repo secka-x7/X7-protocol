@@ -1,23 +1,14 @@
-// X7 PROTOCOL — ALL ADDRESSES CONFIRMED FROM OFFICIAL DOCS
-// Aave: aave.com/docs | Uniswap: docs.uniswap.org
-// Compound: docs.compound.finance | Morpho: docs.morpho.org
-// Pimlico: docs.pimlico.io | Flashbots: docs.flashbots.net
-
 export const EXEC_KEY  = process.env.EXECUTOR_PRIVATE_KEY || null
 export const OWNER_KEY = process.env.OWNER_PRIVATE_KEY    || null
 
 export const CHAINS = {
   polygon: {
     id: 137, gasMethod: 'pimlico',
-    rpcHttp: `https://polygon-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_POLY_KEY||'demo'}`,
-    rpcWss:  `wss://polygon-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_POLY_KEY||'demo'}`,
+    rpcHttp: `https://polygon-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_POL_KEY||'demo'}`,
+    rpcWss:  `wss://polygon-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_POL_KEY||'demo'}`,
     pimlico: `https://api.pimlico.io/v2/137/rpc?apikey=${process.env.PIMLICO_API_KEY||''}`,
-    // Aave V3 — polygonscan verified
     aavePool:     '0x794a61358D6845594F94dc1DB02A252b5b4814aD',
     aaveData:     '0x9441B65EE553F70df9C77d45d3283B6BC24F222d',
-    // Compound V3 USDC comet — polygonscan verified
-    compoundUsdc: '0xF25212E676D1F7F89Cd72fFEe66158f541246445',
-    // Uniswap SwapRouter02 — docs.uniswap.org confirmed
     router:       '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45',
     quoter:       '0x61fFE014bA17989E743c5F6cB21bF9697530B21e',
     usdc:   '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174',
@@ -35,7 +26,6 @@ export const CHAINS = {
     pimlico: `https://api.pimlico.io/v2/42161/rpc?apikey=${process.env.PIMLICO_API_KEY||''}`,
     aavePool:     '0x794a61358D6845594F94dc1DB02A252b5b4814aD',
     aaveData:     '0x69FA688f1Dc47d4B5d8029D5a35FB7a548310654',
-    compoundUsdc: '0x9c4ec768c28032b0Fed380b8b8b6E8FeC4B2f67f',
     router:       '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45',
     quoter:       '0x61fFE014bA17989E743c5F6cB21bF9697530B21e',
     usdc:  '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
@@ -53,8 +43,6 @@ export const CHAINS = {
     flashbotsRelay: 'https://relay.flashbots.net',
     aavePool:     '0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2',
     aaveData:     '0x7B4EB56E7CD4b454BA8ff71E4518426369a138a3',
-    compoundUsdc: '0xc3d688B66703497DAA19211EEdff47f25384cdc3',
-    // Morpho Blue singleton — etherscan verified
     morpho:       '0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb',
     router:       '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45',
     quoter:       '0x61fFE014bA17989E743c5F6cB21bF9697530B21e',
@@ -66,18 +54,21 @@ export const CHAINS = {
     liquidationBonuses: { weth:500, wbtc:1000, usdc:450, link:750, dai:450 },
     minProfit: 60, flashFeeBps: 5, active: true
   },
-  base: {
-    id: 8453, gasMethod: 'pimlico',
-    rpcHttp: `https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_BASE_KEY||'demo'}`,
-    rpcWss:  `wss://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_BASE_KEY||'demo'}`,
-    pimlico: `https://api.pimlico.io/v2/8453/rpc?apikey=${process.env.PIMLICO_API_KEY||''}`,
-    morpho:  '0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb',
-    router:  '0x2626664c2603336E57B271c5C0b26F421741e481',
-    quoter:  '0x3d4e44Eb1374240CE5F1B136041efad1D79bE9c2',
-    usdc: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
-    weth: '0x4200000000000000000000000000000000000006',
-    liquidationBonuses: { weth:500, usdc:450 },
-    minProfit: 5, flashFeeBps: 0, active: true
+  avalanche: {
+    id: 43114, gasMethod: 'pimlico',
+    rpcHttp: `https://avax-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_AVAX_KEY||'demo'}`,
+    rpcWss:  `wss://avax-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_AVAX_KEY||'demo'}`,
+    pimlico: `https://api.pimlico.io/v2/43114/rpc?apikey=${process.env.PIMLICO_API_KEY||''}`,
+    aavePool:     '0x794a61358D6845594F94dc1DB02A252b5b4814aD',
+    aaveData:     '0x69FA688f1Dc47d4B5d8029D5a35FB7a548310654',
+    router:       '0xbb00FF08d01D300023C629E8fFfFcb65A5a578cE',
+    quoter:       '0xbe0F5544EC67e9B3b2D979aaA43f18Fd87E6257F',
+    usdc:  '0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E',
+    weth:  '0x49D5c2BdFfac6CE2BFdB6640F4F80f226bc10bAB',
+    wavax: '0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7',
+    wbtc:  '0x50b7545627a5162F82A992c33b87aDc75187B218',
+    liquidationBonuses: { weth:500, wbtc:1000, usdc:450, wavax:750 },
+    minProfit: 10, flashFeeBps: 5, active: true
   }
 }
 
@@ -85,7 +76,6 @@ export const ACTIVE_CHAINS = Object.entries(CHAINS)
   .filter(([,c]) => c.active && !c.rpcHttp.includes('demo'))
   .map(([k]) => k)
 
-// Aave V3 event topics — confirmed from aave-v3-core
 export const TOPICS = {
   BORROW:      '0xb3d084820fb1a9decffb176436bd02558d15fac9b0ddfed8c465bc7359d7dce0',
   LIQUIDATION: '0xe413a321e8681d831f4dbccbca790d2952b56f977908e45be37335533e005286'
