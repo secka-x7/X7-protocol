@@ -1,121 +1,168 @@
-// X7 PROTOCOL — PIMLICO ERC-4337
-// Safe smart account + ERC-20 paymaster (USDC pays gas)
-// Zero MATIC / ETH ever needed in wallet
-// Confirmed API: docs.pimlico.io/permissionless
+    // X7 PROTOCOL — PIMLICO ERC-4337
+// Uses permissionless SDK properly:
+//   SimpleSmartAccount owned by EXECUTOR_PRIVATE_KEY
+//   Pimlico ERC-20 paymaster — USDC pays gas, zero native token ever needed
+//   EntryPoint v0.7 (permissionless 0.2.x default)
+//
+// Flow per tx:
+//   1. createPimlicoClient  → bundler + paymaster RPC
+//   2. toSimpleSmartAccount → deterministic smart account from EOA key
+//   3. createSmartAccountClient → viem-compatible client that signs + submits UserOps
+//   4. client.sendTransaction → encodes as UserOp, gets paymaster USDC quote, signs, submits
+//
+// Fallback: if Pimlico key missing → sendDirect() (EOA needs native gas)
 
-import { createPublicClient, createWalletClient, http, encodeFunctionData } from 'viem'
+import {
+  createPublicClient,
+  createWalletClient,
+  http
+} from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
-import { polygon, arbitrum, base } from 'viem/chains'
+import { polygon, arbitrum, base, mainnet, avalanche } from 'viem/chains'
+import { createSmartAccountClient } from 'permissionless'
+import { toSimpleSmartAccount } from 'permissionless/accounts'
+import { createPimlicoClient } from 'permissionless/clients/pimlico'
+import { entryPoint07Address } from 'viem/account-abstraction'
 import { CHAINS, EXEC_KEY } from './config.js'
 import { getConfig, setConfig } from './db.js'
 
-const VIEM_CHAINS  = { polygon, arbitrum, base }
-const _clients     = {}
-const _wallets     = {}
-const _smartAddrs  = {}
+const VIEM_CHAINS = { polygon, arbitrum, base, ethereum: mainnet, avalanche }
+
+// Cache: one smart account client per chain
+const _publicClients  = {}
+const _walletClients  = {}
+const _smartClients   = {}   // createSmartAccountClient instances
+const _smartAddresses = {}   // resolved smart account addresses
 
 function getAccount() {
   if (!EXEC_KEY) throw new Error('EXECUTOR_PRIVATE_KEY not set')
-  return privateKeyToAccount(EXEC_KEY)
+  const k = EXEC_KEY.startsWith('0x') ? EXEC_KEY : '0x' + EXEC_KEY
+  return privateKeyToAccount(k)
 }
 
 export function getPublicClient(chainName) {
-  if (!_clients[chainName]) {
-    _clients[chainName] = createPublicClient({
+  if (!_publicClients[chainName]) {
+    _publicClients[chainName] = createPublicClient({
       chain:     VIEM_CHAINS[chainName],
       transport: http(CHAINS[chainName].rpcHttp)
     })
   }
-  return _clients[chainName]
+  return _publicClients[chainName]
 }
 
 export function getWalletClient(chainName) {
-  if (!_wallets[chainName]) {
-    _wallets[chainName] = createWalletClient({
+  if (!_walletClients[chainName]) {
+    _walletClients[chainName] = createWalletClient({
       account:   getAccount(),
       chain:     VIEM_CHAINS[chainName],
       transport: http(CHAINS[chainName].rpcHttp)
     })
   }
-  return _wallets[chainName]
+  return _walletClients[chainName]
 }
 
-// Get smart account address for this chain
-// Uses deterministic Safe deployment — same address across chains
-export async function getSmartAddress(chainName) {
-  if (_smartAddrs[chainName]) return _smartAddrs[chainName]
-  const cached = getConfig(`smart_addr_${chainName}`)
-  if (cached) { _smartAddrs[chainName] = cached; return cached }
+// Build a Pimlico smart account client with ERC-20 USDC paymaster
+// Returns null if PIMLICO_API_KEY is not set
+async function getSmartClient(chainName) {
+  if (_smartClients[chainName]) return _smartClients[chainName]
 
-  // For Pimlico smart accounts the owner EOA IS the smart account controller
-  // We use the executor EOA directly as the owner since we need to call
-  // smart contract functions from it. The Pimlico paymaster patches the
-  // UserOperation to use USDC for gas.
-  const account = getAccount()
-  _smartAddrs[chainName] = account.address
-  setConfig(`smart_addr_${chainName}`, account.address)
-  return account.address
-}
-
-// Send a transaction via Pimlico bundler with ERC-20 paymaster
-// USDC deducted from smart account to pay gas — zero native token
-export async function sendViaPimlico(chainName, to, data, value=0n) {
   const chain = CHAINS[chainName]
-  if (!chain.pimlico || chain.pimlico.includes('apikey=')) {
-    // No valid Pimlico key — fall back to direct EOA transaction
-    return sendDirect(chainName, to, data, value)
-  }
+  const pimlicoUrl = chain.pimlico
+  // pimlico url ends with apikey= if key is missing
+  if (!pimlicoUrl || pimlicoUrl.endsWith('apikey=')) return null
 
-  try {
-    // Build and send UserOperation via Pimlico bundler
-    const resp = await fetch(chain.pimlico, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        jsonrpc: '2.0', id: 1,
-        method: 'eth_sendUserOperation',
-        params: [{
-          sender:               await getSmartAddress(chainName),
-          nonce:                '0x0',
-          initCode:             '0x',
-          callData:             data,
-          callGasLimit:         '0x493E0',
-          verificationGasLimit: '0x493E0',
-          preVerificationGas:   '0x493E0',
-          maxFeePerGas:         '0x77359400',
-          maxPriorityFeePerGas: '0x3B9ACA00',
-          paymasterAndData:     '0x',
-          signature:            '0x'
-        }, 'v0.6']
-      })
-    })
-    const result = await resp.json()
-    if (result.error) throw new Error(result.error.message)
-    return result.result
-  } catch (e) {
-    console.log(`[PIMLICO] ${chainName}: ${e.message} — falling back to direct`)
-    return sendDirect(chainName, to, data, value)
-  }
+  const publicClient = getPublicClient(chainName)
+  const account      = getAccount()
+
+  // Step 1: Build smart account (SimpleAccount v0.7, deterministic from EOA)
+  const smartAccount = await toSimpleSmartAccount({
+    client:     publicClient,
+    owner:      account,
+    entryPoint: { address: entryPoint07Address, version: '0.7' }
+  })
+
+  // Cache the smart account address
+  _smartAddresses[chainName] = smartAccount.address
+  setConfig(`smart_addr_${chainName}`, smartAccount.address)
+
+  // Step 2: Pimlico client handles bundler + paymaster RPC
+  const pimlicoClient = createPimlicoClient({
+    transport: http(pimlicoUrl),
+    chain:     VIEM_CHAINS[chainName],
+    entryPoint: { address: entryPoint07Address, version: '0.7' }
+  })
+
+  // Step 3: Smart account client — wraps everything into a standard viem client
+  // paymasterContext tells Pimlico to charge gas in USDC (ERC-20 paymaster)
+  const smartClient = createSmartAccountClient({
+    account:      smartAccount,
+    chain:        VIEM_CHAINS[chainName],
+    bundlerTransport: http(pimlicoUrl),
+    paymaster:    pimlicoClient,
+    paymasterContext: {
+      token: chain.usdc   // ← this is the entire paymaster config: pay gas in USDC
+    }
+  })
+
+  _smartClients[chainName] = smartClient
+  console.log(`[PIMLICO] ${chainName}: smart account = ${smartAccount.address}`)
+  return smartClient
 }
 
-// Direct EOA fallback — used when Pimlico unavailable
-async function sendDirect(chainName, to, data, value=0n) {
-  const wallet  = getWalletClient(chainName)
-  const client  = getPublicClient(chainName)
-  const hash    = await wallet.sendTransaction({ to, data, value })
-  await client.waitForTransactionReceipt({ hash, timeout: 120000 })
+// Main send function — used by executor.js, deployer.js, yield.js
+// Tries ERC-4337 path first, falls back to direct EOA tx
+export async function sendViaPimlico(chainName, to, data, value = 0n) {
+  try {
+    const smartClient = await getSmartClient(chainName)
+
+    if (smartClient) {
+      // ERC-4337 path — gas paid in USDC, zero MATIC/ETH needed
+      const txHash = await smartClient.sendTransaction({ to, data, value })
+      console.log(`[PIMLICO] ${chainName}: UserOp sent → ${txHash}`)
+      return txHash
+    }
+  } catch (e) {
+    console.log(`[PIMLICO] ${chainName}: ERC-4337 failed (${e.message?.slice(0, 100)}) — falling back to direct`)
+  }
+
+  // Fallback: direct EOA tx — requires native gas in wallet
+  return sendDirect(chainName, to, data, value)
+}
+
+// Direct EOA transaction — only used as fallback
+async function sendDirect(chainName, to, data, value = 0n) {
+  const wallet = getWalletClient(chainName)
+  const client = getPublicClient(chainName)
+  const hash   = await wallet.sendTransaction({ to, data, value })
+  await client.waitForTransactionReceipt({ hash, timeout: 120_000 })
   return hash
 }
 
-// Deploy contract via direct transaction
-export async function deployContract(chainName, abi, bytecode, args=[]) {
+// Deploy contract — always uses EOA direct tx (one-time cost, fine)
+export async function deployContract(chainName, abi, bytecode, args = []) {
   const wallet = getWalletClient(chainName)
   const client = getPublicClient(chainName)
   const hash   = await wallet.deployContract({ abi, bytecode, args })
-  const r      = await client.waitForTransactionReceipt({ hash, timeout: 120000 })
+  const r      = await client.waitForTransactionReceipt({ hash, timeout: 120_000 })
   return r.contractAddress
 }
 
+// Returns the smart account address if initialised, else EOA address
 export function getExecutorAddress() {
-  try { return getAccount().address } catch { return null }
+  try {
+    // Return EOA address — used for profit balance checks
+    return getAccount().address
+  } catch {
+    return null
+  }
+}
+
+// Returns smart account address for a chain (initialised lazily)
+export async function getSmartAddress(chainName) {
+  if (_smartAddresses[chainName]) return _smartAddresses[chainName]
+  const cached = getConfig(`smart_addr_${chainName}`)
+  if (cached) { _smartAddresses[chainName] = cached; return cached }
+  // Force init to get address
+  await getSmartClient(chainName).catch(() => {})
+  return _smartAddresses[chainName] || getAccount().address
 }
