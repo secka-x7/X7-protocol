@@ -18,6 +18,11 @@ async function boot() {
     const { loadManualContracts } = await import('./deployer.js')
     loadManualContracts()
   } catch {}
+  // Load manually set contract addresses from Railway env vars
+  try {
+    const { loadManualContracts } = await import('./deployer.js')
+    loadManualContracts()
+  } catch {}
 
   // Env check
   const need=['EXECUTOR_PRIVATE_KEY','PIMLICO_API_KEY','MODEM_PAY_SECRET_KEY','MODEM_PAY_WAVE_NUMBER']
