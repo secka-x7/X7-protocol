@@ -3,248 +3,290 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>X7 PROTOCOL</title>
+<title>X7 PROTOCOL — 33 STRATEGY ENGINE</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#060608;--s1:#0a0a0f;--s2:#0f0f16;--b:#1a1a2e;
-  --blue:#2563eb;--bluel:#3b82f6;--blueg:rgba(37,99,235,.1);
-  --green:#10b981;--red:#ef4444;--yellow:#f59e0b;--purple:#8b5cf6;
-  --t1:#e2e8f0;--t2:#64748b;--t3:#2d3748;
-  --mono:'JetBrains Mono',monospace;--radius:6px;--radius-lg:10px
+  --bg:#020204;--s1:#07070f;--s2:#0c0c18;--b:#141428;--b2:#1e1e3a;
+  --blue:#2563eb;--bluel:#3b82f6;--blueg:rgba(37,99,235,.08);
+  --green:#10b981;--greend:#059669;--red:#ef4444;--yellow:#f59e0b;
+  --purple:#8b5cf6;--cyan:#06b6d4;--orange:#f97316;
+  --t1:#f0f4ff;--t2:#6b7db3;--t3:#2a3050;
+  --mono:'JetBrains Mono','Fira Code',Consolas,monospace;
+  --r:6px;--rl:10px;
+  --glow-blue:0 0 20px rgba(37,99,235,.3);
+  --glow-green:0 0 20px rgba(16,185,129,.3)
 }
 html,body{height:100%;background:var(--bg);color:var(--t1);
   font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-  overflow-x:hidden;font-size:13px}
-.layout{display:grid;grid-template-columns:220px 1fr;min-height:100vh}
+  overflow-x:hidden;font-size:12px;-webkit-font-smoothing:antialiased}
+.layout{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
 
 /* SIDEBAR */
-.sidebar{background:var(--s1);border-right:1px solid var(--b);
+.sb{background:var(--s1);border-right:1px solid var(--b);
   display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
-.logo-wrap{padding:22px 20px 16px;border-bottom:1px solid var(--b)}
-.logo{font-size:17px;font-weight:800;letter-spacing:4px;color:var(--bluel)}
-.logo-sub{font-size:9px;color:var(--t3);letter-spacing:3px;margin-top:4px;text-transform:uppercase}
+.logo-wrap{padding:20px 18px 14px;border-bottom:1px solid var(--b);
+  background:linear-gradient(180deg,rgba(37,99,235,.06),transparent)}
+.logo{font-size:20px;font-weight:900;letter-spacing:5px;color:var(--bluel);
+  text-shadow:0 0 30px rgba(59,130,246,.6),0 0 60px rgba(59,130,246,.2)}
+.logo-sub{font-size:8px;color:var(--t3);letter-spacing:3px;margin-top:3px;text-transform:uppercase}
+.logo-ver{font-size:8px;color:rgba(37,99,235,.5);margin-top:2px;font-family:var(--mono)}
+
+/* LIVE STATUS */
 .status-bar{padding:10px 16px;border-bottom:1px solid var(--b);background:var(--s2)}
 .live-row{display:flex;align-items:center;gap:6px;margin-bottom:4px}
-.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
-.live-dot.red{background:var(--red)}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-.live-label{font-size:9px;color:var(--green);letter-spacing:2px;font-weight:700}
-.up-val{font-size:9px;color:var(--t3);margin-left:auto}
-nav{flex:1;padding:6px 0}
-.nav-sec{padding:10px 16px 4px;font-size:8px;color:var(--t3);letter-spacing:2px;text-transform:uppercase;font-weight:600}
-.ni{display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;
-  color:var(--t2);font-size:11px;font-weight:500;transition:.15s;
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);
+  animation:pulse 1.5s infinite;flex-shrink:0;
+  box-shadow:0 0 8px var(--green)}
+.live-dot.red{background:var(--red);box-shadow:0 0 8px var(--red)}
+.live-dot.yellow{background:var(--yellow);box-shadow:0 0 8px var(--yellow)}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(0.8)}}
+.live-lbl{font-size:9px;color:var(--green);letter-spacing:2.5px;font-weight:800}
+.up-val{font-size:8px;color:var(--t3);margin-left:auto;font-family:var(--mono)}
+
+/* NAV */
+nav{flex:1;padding:4px 0;overflow-y:auto}
+.ns{padding:8px 14px 3px;font-size:7px;color:var(--t3);letter-spacing:2px;
+  text-transform:uppercase;font-weight:700}
+.ni{display:flex;align-items:center;gap:8px;padding:9px 14px;cursor:pointer;
+  color:var(--t2);font-size:10px;font-weight:500;transition:.12s;
   border-left:2px solid transparent;letter-spacing:.3px}
 .ni:hover{background:var(--blueg);color:var(--t1)}
 .ni.on{background:var(--blueg);color:var(--bluel);border-left-color:var(--blue)}
-.ni-badge{margin-left:auto;font-size:8px;padding:2px 6px;border-radius:10px;
-  background:var(--red);color:#fff;font-weight:700}
-.ni-badge.green{background:var(--green)}
-.ni-badge.blue{background:var(--blue)}
+.nb{margin-left:auto;font-size:7px;padding:2px 5px;border-radius:8px;
+  font-weight:800;min-width:16px;text-align:center}
+.nb.red{background:var(--red);color:#fff}
+.nb.green{background:var(--green);color:#fff}
+.nb.blue{background:var(--blue);color:#fff}
+.nb.yellow{background:var(--yellow);color:#000}
+
+/* SIDEBAR STATS */
 .sb-stats{padding:10px 14px;border-top:1px solid var(--b);border-bottom:1px solid var(--b)}
-.sb-stat{display:flex;justify-content:space-between;padding:4px 0;font-size:10px}
-.sb-stat-l{color:var(--t3)}
-.sb-stat-v{font-family:var(--mono);color:var(--t1);font-weight:600}
-.sb-stat-v.green{color:var(--green)}
-.sb-stat-v.blue{color:var(--bluel)}
-.sb-stat-v.yellow{color:var(--yellow)}
-.sb-stat-v.red{color:var(--red)}
-.exec-box{padding:10px 14px;border-top:1px solid var(--b);background:var(--s2)}
-.exec-label{font-size:8px;color:var(--t3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px}
-.exec-addr{font-family:var(--mono);font-size:9px;color:var(--bluel);word-break:break-all;cursor:pointer}
+.ss{display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:10px}
+.ss-l{color:var(--t3)}
+.ss-v{font-family:var(--mono);font-weight:700;color:var(--t1)}
+.ss-v.g{color:var(--green)}.ss-v.b{color:var(--bluel)}
+.ss-v.y{color:var(--yellow)}.ss-v.r{color:var(--red)}
+
+/* WALLET STATUS */
+.wallet-mini{padding:10px 14px;border-top:1px solid var(--b);background:var(--s2)}
+.wm-label{font-size:7px;color:var(--t3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px}
+.wm-row{display:flex;justify-content:space-between;align-items:center;padding:2px 0;font-size:9px}
+.wm-chain{color:var(--t2);font-weight:600}
+.wm-bal{font-family:var(--mono);color:var(--t3)}
+.wm-bal.funded{color:var(--green);font-weight:700}
+.wm-bal.live{color:var(--bluel);font-weight:700}
+
+/* EXEC BOX */
+.exec-box{padding:10px 14px;border-top:1px solid var(--b);background:rgba(37,99,235,.04)}
+.exec-lbl{font-size:7px;color:var(--t3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px}
+.exec-addr{font-family:var(--mono);font-size:8px;color:var(--bluel);
+  word-break:break-all;cursor:pointer;line-height:1.6}
 .exec-addr:hover{color:var(--t1)}
+.exec-hint{font-size:7px;color:var(--t3);margin-top:3px;cursor:pointer}
+.exec-hint:hover{color:var(--bluel)}
 
 /* MAIN */
-.main{padding:20px;overflow-y:auto;display:flex;flex-direction:column;gap:16px}
-.page{display:none}.page.on{display:flex;flex-direction:column;gap:14px}
-.ph{display:flex;align-items:center;justify-content:space-between}
-.ph-left{display:flex;flex-direction:column;gap:3px}
-.pt{font-size:16px;font-weight:700;letter-spacing:.5px}
-.ps{font-size:11px;color:var(--t2)}
-.ph-right{display:flex;gap:8px;align-items:center}
+.main{padding:18px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
+.page{display:none}.page.on{display:flex;flex-direction:column;gap:12px}
+.ph{display:flex;align-items:flex-start;justify-content:space-between}
+.ph-l{display:flex;flex-direction:column;gap:3px}
+.pt{font-size:18px;font-weight:800;letter-spacing:.8px;
+  background:linear-gradient(135deg,var(--t1),var(--bluel));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.ps{font-size:10px;color:var(--t2)}
+.ph-r{display:flex;gap:6px;align-items:center}
 
 /* REVENUE BAR */
-.rev-bar{background:var(--s1);border:1px solid var(--b);border-radius:var(--radius-lg);
-  padding:14px 20px;display:flex;flex-wrap:wrap;align-items:stretch;position:relative;overflow:hidden}
+.rev-bar{background:var(--s1);border:1px solid var(--b);border-radius:var(--rl);
+  padding:14px 18px;display:flex;flex-wrap:wrap;gap:0;position:relative;overflow:hidden}
 .rev-bar::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
-  background:linear-gradient(90deg,var(--blue),var(--purple),var(--green))}
-.rv{min-width:120px;padding:0 20px;border-right:1px solid var(--b)}
+  background:linear-gradient(90deg,var(--blue),var(--purple),var(--cyan),var(--green))}
+.rv{min-width:110px;padding:0 18px;border-right:1px solid var(--b)}
 .rv:first-child{padding-left:0}
 .rv:last-child{border-right:none}
-.rl{font-size:8px;color:var(--t3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px}
-.rv-val{font-size:20px;font-weight:800;font-family:var(--mono);color:var(--green);line-height:1}
-.rv-val.blue{color:var(--bluel)}
-.rv-val.yellow{color:var(--yellow)}
-.rv-val.purple{color:var(--purple)}
-.rv-sub{font-size:9px;color:var(--t3);margin-top:3px}
+.rl-{font-size:7px;color:var(--t3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px}
+.rv-v{font-size:22px;font-weight:900;font-family:var(--mono);color:var(--green);line-height:1}
+.rv-v.b{color:var(--bluel)}.rv-v.y{color:var(--yellow)}.rv-v.p{color:var(--purple)}.rv-v.c{color:var(--cyan)}
+.rv-s{font-size:8px;color:var(--t3);margin-top:2px}
 
 /* GRIDS */
-.g2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
-.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.g2{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.g6{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
 
 /* CARDS */
-.card{background:var(--s1);border:1px solid var(--b);border-radius:var(--radius-lg);padding:16px;position:relative;overflow:hidden}
-.card.sm{padding:12px}
-.card.highlight{border-color:var(--blue)}
-.card-accent{position:absolute;top:0;left:0;right:0;height:2px;background:var(--blue)}
-.card-accent.green{background:var(--green)}
-.card-accent.purple{background:var(--purple)}
-.card-accent.red{background:var(--red)}
-.card-accent.yellow{background:var(--yellow)}
-.ct{font-size:8px;color:var(--t3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;font-weight:600}
-.cv{font-size:24px;font-weight:800;font-family:var(--mono)}
-.cv.g{color:var(--green)}.cv.b{color:var(--bluel)}.cv.y{color:var(--yellow)}
-.cv.p{color:var(--purple)}.cv.r{color:var(--red)}
-.cs{font-size:10px;color:var(--t2);margin-top:3px}
-
-/* WALLET BALANCE CARDS — NEW */
-.wallet-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:4px}
-.wc{background:var(--s2);border:1px solid var(--b);border-radius:var(--radius);padding:12px;position:relative}
-.wc.funded{border-color:rgba(16,185,129,.4);background:rgba(16,185,129,.04)}
-.wc.deploying{border-color:rgba(59,130,246,.4);animation:borderPulse 1.5s infinite}
-.wc.live{border-color:rgba(16,185,129,.6);background:rgba(16,185,129,.06)}
-@keyframes borderPulse{0%,100%{border-color:rgba(59,130,246,.4)}50%{border-color:var(--blue)}}
-.wc-chain{font-size:10px;font-weight:700;letter-spacing:1.5px;color:var(--bluel);margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
-.wc-badge{font-size:7px;padding:1px 5px;border-radius:3px;font-weight:700}
-.wc-badge.live{background:rgba(16,185,129,.15);color:var(--green)}
-.wc-badge.wait{background:rgba(245,158,11,.1);color:var(--yellow)}
-.wc-badge.fail{background:rgba(239,68,68,.1);color:var(--red)}
-.wc-badge.deploy{background:rgba(59,130,246,.1);color:var(--bluel)}
-.wc-bal{font-size:15px;font-weight:800;font-family:var(--mono);color:var(--t1);margin-bottom:2px}
-.wc-bal.has-funds{color:var(--green)}
-.wc-needed{font-size:9px;color:var(--t3)}
-.wc-contract{font-size:8px;color:var(--green);margin-top:4px;font-family:var(--mono)}
-
-/* STRATEGY CARDS — NEW */
-.strat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
-.sc{background:var(--s2);border:1px solid var(--b);border-radius:var(--radius-lg);
+.card{background:var(--s1);border:1px solid var(--b);border-radius:var(--rl);
   padding:14px;position:relative;overflow:hidden}
-.sc.active{border-color:rgba(16,185,129,.3)}
-.sc.inactive{opacity:.6}
-.sc-accent{position:absolute;top:0;left:0;right:0;height:2px}
-.sc-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.sc-name{font-size:11px;font-weight:700;letter-spacing:1px;color:var(--t1)}
-.sc-status{font-size:8px;padding:2px 6px;border-radius:3px;font-weight:700}
-.sc-status.active{background:rgba(16,185,129,.15);color:var(--green)}
-.sc-status.inactive{background:rgba(100,116,139,.15);color:var(--t2)}
-.sc-profit{font-size:20px;font-weight:800;font-family:var(--mono);color:var(--green);margin-bottom:4px}
-.sc-row{display:flex;justify-content:space-between;font-size:9px;padding:2px 0;border-top:1px solid var(--b);margin-top:4px}
+.card.sm{padding:11px}
+.card.hl{border-color:var(--blue);box-shadow:var(--glow-blue)}
+.card.hl-green{border-color:var(--green);box-shadow:var(--glow-green)}
+.ca{position:absolute;top:0;left:0;right:0;height:2px}
+.ca.blue{background:var(--blue)}.ca.green{background:var(--green)}
+.ca.purple{background:var(--purple)}.ca.red{background:var(--red)}
+.ca.yellow{background:var(--yellow)}.ca.cyan{background:var(--cyan)}
+.ct{font-size:7px;color:var(--t3);text-transform:uppercase;
+  letter-spacing:1.5px;margin-bottom:7px;font-weight:700}
+.cv{font-size:22px;font-weight:900;font-family:var(--mono)}
+.cv.g{color:var(--green)}.cv.b{color:var(--bluel)}.cv.y{color:var(--yellow)}
+.cv.p{color:var(--purple)}.cv.r{color:var(--red)}.cv.c{color:var(--cyan)}
+.cs{font-size:9px;color:var(--t2);margin-top:2px}
+
+/* WALLET BALANCE CARDS */
+.wg{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.wc{background:var(--s2);border:1px solid var(--b);border-radius:var(--r);padding:11px;
+  position:relative;overflow:hidden;transition:.2s}
+.wc.has{border-color:rgba(16,185,129,.5);background:rgba(16,185,129,.04);
+  box-shadow:0 0 15px rgba(16,185,129,.1)}
+.wc.live{border-color:var(--green);box-shadow:var(--glow-green)}
+.wc.deploying{border-color:var(--blue);animation:glowPulse 1.5s infinite}
+@keyframes glowPulse{0%,100%{box-shadow:0 0 5px rgba(37,99,235,.3)}50%{box-shadow:0 0 20px rgba(37,99,235,.6)}}
+.wc-glow{position:absolute;top:0;left:0;right:0;height:1px}
+.wc-glow.green{background:var(--green)}.wc-glow.yellow{background:var(--yellow)}.wc-glow.blue{background:var(--blue)}
+.wc-chain{font-size:9px;font-weight:800;letter-spacing:2px;color:var(--bluel);margin-bottom:6px;
+  display:flex;justify-content:space-between;align-items:center}
+.wc-badge{font-size:6px;padding:2px 5px;border-radius:3px;font-weight:800;letter-spacing:.5px}
+.wc-badge.live{background:rgba(16,185,129,.2);color:var(--green);border:1px solid var(--green)}
+.wc-badge.wait{background:rgba(245,158,11,.1);color:var(--yellow);border:1px solid var(--yellow)}
+.wc-badge.fail{background:rgba(239,68,68,.1);color:var(--red);border:1px solid var(--red)}
+.wc-badge.dep{background:rgba(37,99,235,.2);color:var(--bluel);border:1px solid var(--blue)}
+.wc-bal{font-size:14px;font-weight:800;font-family:var(--mono);color:var(--t3);margin-bottom:3px;transition:.3s}
+.wc-bal.funded{color:var(--green);text-shadow:0 0 10px rgba(16,185,129,.5)}
+.wc-need{font-size:8px;color:var(--t3)}
+.wc-contract{font-size:7px;color:var(--green);margin-top:4px;font-family:var(--mono);
+  overflow:hidden;text-overflow:ellipsis}
+.wc-bar{height:2px;background:var(--b);border-radius:1px;margin-top:6px}
+.wc-bar-fill{height:100%;border-radius:1px;transition:width .8s ease}
+
+/* 33 STRATEGY CARDS */
+.strat-section{display:flex;flex-direction:column;gap:8px}
+.strat-section-title{font-size:8px;color:var(--t3);text-transform:uppercase;
+  letter-spacing:2px;font-weight:700;padding:6px 0;border-bottom:1px solid var(--b)}
+.strat-grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.sc{background:var(--s2);border:1px solid var(--b);border-radius:var(--r);
+  padding:10px;position:relative;overflow:hidden;transition:.15s}
+.sc:hover{border-color:var(--b2);background:var(--s1)}
+.sc.active{border-color:rgba(16,185,129,.25)}
+.sc.hot{border-color:rgba(37,99,235,.4);box-shadow:0 0 10px rgba(37,99,235,.15)}
+.sc-line{position:absolute;top:0;left:0;right:0;height:1px}
+.sc-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.sc-num{font-size:8px;font-weight:800;font-family:var(--mono);color:var(--t3)}
+.sc-name{font-size:9px;font-weight:700;color:var(--t1);flex:1;margin:0 4px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sc-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.sc-dot.on{background:var(--green);box-shadow:0 0 4px var(--green)}
+.sc-dot.off{background:var(--t3)}
+.sc-profit{font-size:16px;font-weight:900;font-family:var(--mono);color:var(--green);margin-bottom:2px}
+.sc-profit.zero{color:var(--t3);font-size:13px}
+.sc-row{display:flex;justify-content:space-between;font-size:8px;padding:1px 0}
 .sc-label{color:var(--t3)}
-.sc-val{font-family:var(--mono);color:var(--t1)}
-.sc-val.yellow{color:var(--yellow)}
-.sc-desc{font-size:9px;color:var(--t2);margin-top:6px;line-height:1.5}
+.sc-val{font-family:var(--mono);color:var(--t2)}
+.sc-val.hot{color:var(--yellow)}
+.sc-missed{font-size:8px;color:var(--yellow);margin-top:2px;font-family:var(--mono)}
 
 /* CHAIN CARDS */
 .chain-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.cc{background:var(--s2);border:1px solid var(--b);border-radius:var(--radius);padding:12px;transition:.2s}
-.cc:hover{border-color:var(--blue)}
+.cc{background:var(--s2);border:1px solid var(--b);border-radius:var(--r);padding:11px;transition:.15s}
+.cc:hover{border-color:var(--b2)}
 .cc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-.cc-name{font-size:11px;font-weight:700;letter-spacing:1.5px;color:var(--bluel)}
-.cc-badge{font-size:7px;padding:2px 6px;border-radius:10px;font-weight:700}
-.cc-badge.live{background:rgba(16,185,129,.15);color:var(--green);border:1px solid var(--green)}
+.cc-name{font-size:10px;font-weight:800;letter-spacing:2px;color:var(--bluel)}
+.cc-badge{font-size:6px;padding:2px 5px;border-radius:8px;font-weight:800}
+.cc-badge.live{background:rgba(16,185,129,.15);color:var(--green);border:1px solid var(--greend)}
 .cc-badge.wait{background:rgba(245,158,11,.1);color:var(--yellow);border:1px solid var(--yellow)}
 .cc-badge.fail{background:rgba(239,68,68,.1);color:var(--red);border:1px solid var(--red)}
-.cc-badge.deploy{background:rgba(59,130,246,.1);color:var(--bluel);border:1px solid var(--blue)}
-.cc-row{display:flex;justify-content:space-between;font-size:9px;padding:2px 0;border-bottom:1px solid var(--b)}
+.cc-badge.dep{background:rgba(37,99,235,.1);color:var(--bluel);border:1px solid var(--blue)}
+.cc-row{display:flex;justify-content:space-between;font-size:8px;padding:2px 0;border-bottom:1px solid var(--b)}
 .cc-row:last-child{border-bottom:none}
-.cc-label{color:var(--t3)}
-.cc-val{color:var(--t1);font-family:var(--mono);font-size:9px}
-.cc-val.ok{color:var(--green)}.cc-val.no{color:var(--red)}.cc-val.wait{color:var(--yellow)}
-.cc-profit{font-size:13px;font-weight:700;font-family:var(--mono);color:var(--green);margin-top:6px}
+.cc-l{color:var(--t3)}
+.cc-v{font-family:var(--mono);font-size:8px}
+.cc-v.ok{color:var(--green)}.cc-v.no{color:var(--red)}.cc-v.wait{color:var(--yellow)}
+.cc-profit{font-size:12px;font-weight:800;font-family:var(--mono);color:var(--green);margin-top:5px}
 
-/* FEED */
-.feed{display:flex;flex-direction:column;gap:4px;max-height:300px;overflow-y:auto}
-.fi{display:flex;align-items:center;gap:8px;padding:8px 10px;
-  background:var(--s2);border-radius:var(--radius);font-size:10px;border-left:3px solid var(--b)}
+/* LIVE FEED */
+.feed{display:flex;flex-direction:column;gap:3px;max-height:320px;overflow-y:auto}
+.fi{display:flex;align-items:center;gap:6px;padding:7px 9px;
+  background:var(--s2);border-radius:var(--r);font-size:9px;
+  border-left:2px solid var(--b);animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateX(-5px)}to{opacity:1;transform:none}}
 .fi.ok{border-left-color:var(--green)}
 .fi.fail{border-left-color:var(--red)}
 .fi.miss{border-left-color:var(--yellow)}
-.fc{font-size:8px;padding:2px 5px;border-radius:3px;background:var(--blueg);
-  color:var(--bluel);font-weight:700;flex-shrink:0}
-.ft{color:var(--t2)}
-.fb{color:var(--t3);font-family:var(--mono)}
-.fp{color:var(--green);font-weight:700;font-family:var(--mono);margin-left:auto}
-.fp.neg{color:var(--red)}.fp.miss{color:var(--yellow)}
+.fc{font-size:7px;padding:1px 4px;border-radius:2px;background:var(--blueg);
+  color:var(--bluel);font-weight:800;flex-shrink:0;font-family:var(--mono)}
+.ft{color:var(--t2);font-family:var(--mono);font-size:8px}
+.fb{color:var(--t3)}
+.fp{font-weight:800;font-family:var(--mono);margin-left:auto;font-size:10px}
+.fp.pos{color:var(--green)}.fp.neg{color:var(--red)}.fp.miss{color:var(--yellow)}
 
 /* TABLES */
-.btbl{width:100%;border-collapse:collapse;font-size:10px}
-.btbl th{padding:7px 10px;text-align:left;color:var(--t3);font-weight:600;
-  border-bottom:1px solid var(--b);font-size:8px;letter-spacing:1px;
+.tbl{width:100%;border-collapse:collapse;font-size:9px}
+.tbl th{padding:7px 9px;text-align:left;color:var(--t3);font-weight:700;
+  border-bottom:1px solid var(--b);font-size:7px;letter-spacing:1px;
   text-transform:uppercase;background:var(--s2)}
-.btbl td{padding:7px 10px;border-bottom:1px solid var(--b);font-family:var(--mono)}
-.btbl tr:hover td{background:var(--s2)}
+.tbl td{padding:6px 9px;border-bottom:1px solid var(--b);font-family:var(--mono)}
+.tbl tr:hover td{background:var(--s2)}
 
 /* BADGES */
-.badge{font-size:8px;padding:2px 6px;border-radius:3px;font-weight:700}
+.badge{font-size:7px;padding:2px 5px;border-radius:3px;font-weight:800;letter-spacing:.5px}
 .bs{background:rgba(16,185,129,.12);color:var(--green)}
 .bf{background:rgba(239,68,68,.12);color:var(--red)}
 .bp{background:rgba(245,158,11,.12);color:var(--yellow)}
-.bbl{background:rgba(59,130,246,.12);color:var(--bluel)}
+.bb{background:rgba(37,99,235,.12);color:var(--bluel)}
 
 /* CONTROLS */
-.btn{padding:9px 16px;background:var(--blue);border:none;border-radius:var(--radius);
-  color:#fff;font-size:11px;font-weight:700;cursor:pointer;transition:.15s;
+.btn{padding:8px 14px;background:var(--blue);border:none;border-radius:var(--r);
+  color:#fff;font-size:10px;font-weight:700;cursor:pointer;transition:.12s;
   letter-spacing:.5px;text-transform:uppercase;font-family:inherit}
-.btn:hover{background:var(--bluel)}
+.btn:hover{background:var(--bluel);box-shadow:var(--glow-blue)}
 .btn:disabled{opacity:.4;cursor:not-allowed}
-.btn.sm{padding:6px 12px;font-size:10px}
+.btn.sm{padding:5px 10px;font-size:9px}
 .btn.ghost{background:transparent;color:var(--t2);border:1px solid var(--b)}
 .btn.ghost:hover{border-color:var(--blue);color:var(--bluel)}
-.btn-full{width:100%;padding:13px}
-
-.inp{background:var(--s2);border:1px solid var(--b);border-radius:var(--radius);
-  padding:10px 14px;color:var(--t1);font-size:13px;font-family:var(--mono);
-  outline:none;transition:.2s;width:100%}
+.btn-full{width:100%;padding:12px}
+.inp{background:var(--s2);border:1px solid var(--b);border-radius:var(--r);
+  padding:9px 12px;color:var(--t1);font-size:12px;font-family:var(--mono);
+  outline:none;transition:.15s;width:100%}
 .inp:focus{border-color:var(--blue);box-shadow:0 0 0 2px var(--blueg)}
-.sel{background:var(--s2);border:1px solid var(--b);border-radius:var(--radius);
-  padding:8px 10px;color:var(--t1);font-size:11px;outline:none;cursor:pointer}
+.sel{background:var(--s2);border:1px solid var(--b);border-radius:var(--r);
+  padding:7px 9px;color:var(--t1);font-size:10px;outline:none;cursor:pointer}
 
 /* TOGGLE */
-.toggle-row{display:flex;align-items:center;justify-content:space-between;
-  padding:12px 14px;background:var(--s2);border:1px solid var(--b);border-radius:var(--radius)}
-.toggle-label{font-size:12px;font-weight:600;color:var(--t1)}
-.toggle-sub{font-size:10px;color:var(--t2)}
-.toggle{width:40px;height:22px;background:var(--b);border:none;border-radius:11px;
+.tr-row{display:flex;align-items:center;justify-content:space-between;
+  padding:11px 13px;background:var(--s2);border:1px solid var(--b);border-radius:var(--r)}
+.tgl{width:38px;height:20px;background:var(--b);border:none;border-radius:10px;
   cursor:pointer;position:relative;transition:.2s;flex-shrink:0}
-.toggle.on{background:var(--blue)}
-.toggle::after{content:'';position:absolute;width:16px;height:16px;background:#fff;
-  border-radius:8px;top:3px;left:3px;transition:.2s}
-.toggle.on::after{left:21px}
+.tgl.on{background:var(--blue);box-shadow:var(--glow-blue)}
+.tgl::after{content:'';position:absolute;width:14px;height:14px;background:#fff;
+  border-radius:7px;top:3px;left:3px;transition:.2s}
+.tgl.on::after{left:21px}
 
 /* MSG */
-.msg{padding:10px 14px;border-radius:var(--radius);font-size:11px;margin-top:8px;display:none}
-.msg.ok{background:rgba(16,185,129,.1);color:var(--green);border:1px solid rgba(16,185,129,.2);display:block}
-.msg.er{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.2);display:block}
+.msg{padding:9px 12px;border-radius:var(--r);font-size:10px;margin-top:7px;display:none;line-height:1.5}
+.msg.ok{background:rgba(16,185,129,.08);color:var(--green);border:1px solid rgba(16,185,129,.2);display:block}
+.msg.er{background:rgba(239,68,68,.08);color:var(--red);border:1px solid rgba(239,68,68,.2);display:block}
 
 /* METRIC */
-.metric-row{display:flex;justify-content:space-between;align-items:center;
-  padding:8px 0;border-bottom:1px solid var(--b);font-size:11px}
-.metric-row:last-child{border-bottom:none}
-.metric-label{color:var(--t2)}
-.metric-val{font-family:var(--mono);color:var(--t1)}
+.mr{display:flex;justify-content:space-between;align-items:center;
+  padding:7px 0;border-bottom:1px solid var(--b);font-size:10px}
+.mr:last-child{border-bottom:none}
+.ml{color:var(--t2)}
+.mv{font-family:var(--mono);color:var(--t1)}
 
 /* TREASURY */
-.tr-panel{background:var(--s2);border:1px solid var(--blue);border-radius:var(--radius-lg);padding:20px}
-.tr-title{font-size:13px;font-weight:700;color:var(--bluel);margin-bottom:3px}
-.tr-sub{font-size:10px;color:var(--t2);margin-bottom:16px}
-.avail-box{background:var(--s1);border:1px solid var(--b);border-radius:var(--radius);
-  padding:14px;margin-bottom:14px;text-align:center}
-.avail-label{font-size:9px;color:var(--t3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px}
-.avail-val{font-size:28px;font-weight:800;font-family:var(--mono);color:var(--green)}
-.pct-row{display:flex;gap:6px;margin-bottom:10px}
-.pct-btn{flex:1;padding:7px;background:var(--s1);border:1px solid var(--b);
-  border-radius:var(--radius);color:var(--t2);font-size:10px;cursor:pointer;transition:.15s;text-align:center}
+.tr-panel{background:var(--s2);border:1px solid var(--blue);
+  border-radius:var(--rl);padding:18px;box-shadow:var(--glow-blue)}
+.avail-box{background:var(--s1);border:1px solid var(--b);border-radius:var(--r);
+  padding:12px;margin-bottom:12px;text-align:center}
+.avail-val{font-size:28px;font-weight:900;font-family:var(--mono);color:var(--green)}
+.pct-row{display:flex;gap:5px;margin-bottom:8px}
+.pct-btn{flex:1;padding:6px;background:var(--s1);border:1px solid var(--b);
+  border-radius:var(--r);color:var(--t2);font-size:9px;cursor:pointer;transition:.12s;text-align:center}
 .pct-btn:hover{border-color:var(--blue);color:var(--bluel)}
 
-/* FEE TABLE */
-.fee-tier{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--b)}
-.fee-tier:last-child{border-bottom:none}
-.fee-hf{font-size:10px;color:var(--t2);min-width:120px}
-.fee-bar-wrap{flex:1;height:8px;background:var(--b);border-radius:4px;overflow:hidden}
-.fee-bar{height:100%;border-radius:4px;transition:.5s}
-.fee-pct{font-size:11px;font-weight:700;font-family:var(--mono);min-width:40px;text-align:right}
+/* SCROLLBAR */
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px}
 
 /* MOBILE */
 .mn{display:none;position:fixed;bottom:0;left:0;right:0;
@@ -252,62 +294,92 @@ nav{flex:1;padding:6px 0}
   padding:6px 0 env(safe-area-inset-bottom);z-index:100}
 .mn .tabs{display:flex}
 .mn .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
-  padding:7px 4px;cursor:pointer;color:var(--t3);font-size:8px;font-weight:500;
-  background:none;border:none;transition:.15s}
+  padding:6px 2px;cursor:pointer;color:var(--t3);font-size:7px;font-weight:600;
+  background:none;border:none;letter-spacing:.5px;transition:.12s}
 .mn .tab.on{color:var(--blue)}
-::-webkit-scrollbar{width:3px;height:3px}
-::-webkit-scrollbar-thumb{background:var(--b);border-radius:2px}
+
+/* FEE TIER VIS */
+.fee-bar-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--b)}
+.fee-hf{font-size:9px;color:var(--t2);min-width:130px}
+.fee-bar-w{flex:1;height:6px;background:var(--b);border-radius:3px;overflow:hidden}
+.fee-bar-f{height:100%;border-radius:3px;transition:.5s}
+.fee-pct{font-size:10px;font-weight:800;font-family:var(--mono);min-width:35px;text-align:right}
+
+/* NOTIF */
+.notif{position:fixed;top:20px;right:20px;background:var(--blue);color:#fff;
+  padding:10px 16px;border-radius:var(--r);font-size:11px;z-index:9999;
+  box-shadow:var(--glow-blue);animation:slideIn .3s ease}
+@keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:none}}
+
+/* RESPONSIVE */
+@media(max-width:1200px){.strat-grid-4{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:900px){
+  .wg,.chain-grid,.strat-grid-4{grid-template-columns:repeat(2,1fr)}
+  .g4,.g6{grid-template-columns:repeat(2,1fr)}
+  .g3{grid-template-columns:repeat(2,1fr)}
+  .rev-bar{flex-wrap:wrap}.rv{min-width:calc(50% - 10px);padding:8px 12px}
+}
 @media(max-width:768px){
   .layout{grid-template-columns:1fr}
-  .sidebar{display:none}.mn{display:block}
-  .main{padding:12px;padding-bottom:70px}
-  .g2,.g3,.g4,.wallet-grid,.strat-grid,.chain-grid{grid-template-columns:repeat(2,1fr)}
-  .rev-bar{flex-wrap:wrap}
-  .rv{min-width:calc(50% - 10px);padding:8px 10px}
+  .sb{display:none}.mn{display:block}
+  .main{padding:10px;padding-bottom:68px}
+  .g2{grid-template-columns:1fr}
+  .wg,.chain-grid,.strat-grid-4{grid-template-columns:repeat(2,1fr)}
 }
 </style>
 </head>
 <body>
 <div class="layout">
-<aside class="sidebar">
+<aside class="sb">
   <div class="logo-wrap">
     <div class="logo">X7</div>
-    <div class="logo-sub">MEV + Liquidation Protocol</div>
+    <div class="logo-sub">33 Strategy MEV Engine</div>
+    <div class="logo-ver">v3.0 · $100M+ targets only</div>
   </div>
+
   <div class="status-bar">
     <div class="live-row">
       <div class="live-dot" id="sys-dot"></div>
-      <span class="live-label" id="sys-status">CONNECTING</span>
+      <span class="live-lbl" id="sys-status">CONNECTING</span>
       <span class="up-val" id="sb-uptime">0m</span>
     </div>
-    <div style="font-size:9px;color:var(--t3)" id="sb-chains">Loading...</div>
+    <div style="font-size:8px;color:var(--t3)" id="sb-chains">Loading...</div>
   </div>
+
   <nav>
-    <div class="nav-sec">Monitor</div>
+    <div class="ns">Monitor</div>
     <div class="ni on" onclick="go('overview')">Overview</div>
-    <div class="ni" onclick="go('strategies')">Strategies <span class="ni-badge green" id="nb-strat">4</span></div>
-    <div class="ni" onclick="go('scanner')">Scanner <span class="ni-badge" id="nb-liq">0</span></div>
-    <div class="ni" onclick="go('executions')">Executions <span class="ni-badge blue" id="nb-exec">0</span></div>
-    <div class="nav-sec">Finance</div>
+    <div class="ni" onclick="go('strategies')">33 Strategies <span class="nb green" id="nb-strat">33</span></div>
+    <div class="ni" onclick="go('scanner')">Scanner <span class="nb red" id="nb-liq">0</span></div>
+    <div class="ni" onclick="go('executions')">Executions <span class="nb blue" id="nb-exec">0</span></div>
+    <div class="ns">Finance</div>
     <div class="ni" onclick="go('treasury')">Treasury</div>
-    <div class="nav-sec">System</div>
-    <div class="ni" onclick="go('wallet')">Wallet Balances <span class="ni-badge" id="nb-matic" style="background:var(--yellow)">!</span></div>
+    <div class="ns">System</div>
+    <div class="ni" onclick="go('wallet')">Wallet <span class="nb yellow" id="nb-matic">!</span></div>
     <div class="ni" onclick="go('system')">System</div>
-    <div class="ni" onclick="go('apex')">Apex AI</div>
   </nav>
+
   <div class="sb-stats">
-    <div class="sb-stat"><span class="sb-stat-l">All Time</span><span class="sb-stat-v green" id="sb-total">$0.00</span></div>
-    <div class="sb-stat"><span class="sb-stat-l">Today</span><span class="sb-stat-v green" id="sb-today">$0.00</span></div>
-    <div class="sb-stat"><span class="sb-stat-l">CEX-DEX</span><span class="sb-stat-v blue" id="sb-cexdex">$0.00</span></div>
-    <div class="sb-stat"><span class="sb-stat-l">Backrun</span><span class="sb-stat-v blue" id="sb-backrun">$0.00</span></div>
-    <div class="sb-stat"><span class="sb-stat-l">Missed Rev</span><span class="sb-stat-v yellow" id="sb-missed">$0.00</span></div>
-    <div class="sb-stat"><span class="sb-stat-l">Borrowers</span><span class="sb-stat-v blue" id="sb-borrow">0</span></div>
-    <div class="sb-stat"><span class="sb-stat-l">Liquidatable</span><span class="sb-stat-v red" id="sb-liq">0</span></div>
+    <div class="ss"><span class="ss-l">All Time</span><span class="ss-v g" id="sb-total">$0.00</span></div>
+    <div class="ss"><span class="ss-l">Today</span><span class="ss-v g" id="sb-today">$0.00</span></div>
+    <div class="ss"><span class="ss-l">Strategies Rev</span><span class="ss-v b" id="sb-strat">$0.00</span></div>
+    <div class="ss"><span class="ss-l">Missed Rev</span><span class="ss-v y" id="sb-missed">$0.00</span></div>
+    <div class="ss"><span class="ss-l">Borrowers</span><span class="ss-v b" id="sb-borrow">0</span></div>
+    <div class="ss"><span class="ss-l">Liquidatable</span><span class="ss-v r" id="sb-liq-cnt">0</span></div>
   </div>
+
+  <div class="wallet-mini">
+    <div class="wm-label">Live Wallet Balances</div>
+    <div class="wm-row"><span class="wm-chain">POLYGON</span><span class="wm-bal" id="wm-polygon">0.000000 POL</span></div>
+    <div class="wm-row"><span class="wm-chain">ARBITRUM</span><span class="wm-bal" id="wm-arbitrum">0.000000 ETH</span></div>
+    <div class="wm-row"><span class="wm-chain">ETHEREUM</span><spanclass="wm-bal" id="wm-ethereum">0.000000 ETH</span></div>
+    <div class="wm-row"><span class="wm-chain">AVALANCHE</span><span class="wm-bal" id="wm-avalanche">0.000000 AVAX</span></div>
+  </div>
+
   <div class="exec-box">
-    <div class="exec-label">Executor — Send 0.01 POL Here</div>
-    <div class="exec-addr" id="sb-exec" onclick="copyAddr()">—</div>
-    <div style="font-size:8px;color:var(--t3);margin-top:3px;cursor:pointer" onclick="copyAddr()">Click to copy</div>
+    <div class="exec-lbl">Executor — Send 0.01 POL to Deploy</div>
+    <div class="exec-addr" id="sb-exec" onclick="copyAddr()">Loading...</div>
+    <div class="exec-hint" onclick="copyAddr()">Click to copy — deploys in &lt;1 second</div>
   </div>
 </aside>
 
@@ -316,65 +388,57 @@ nav{flex:1;padding:6px 0}
 <!-- OVERVIEW -->
 <div class="page on" id="p-overview">
   <div class="ph">
-    <div class="ph-left"><div class="pt">OVERVIEW</div><div class="ps">X7 Protocol — MEV + Liquidation Engine</div></div>
-    <div class="ph-right">
-      <div style="font-size:10px;color:var(--t3)" id="ov-update">—</div>
-      <button class="btn sm ghost" onclick="loadOV()">Refresh</button>
-    </div>
+    <div class="ph-l"><div class="pt">OVERVIEW</div><div class="ps">33 strategies · $100M+ targets · all chains live</div></div>
+    <div class="ph-r"><div style="font-size:9px;color:var(--t3)" id="ov-ts">—</div><button class="btn sm ghost" onclick="loadOV()">Refresh</button></div>
   </div>
 
   <div class="rev-bar">
-    <div class="rv"><div class="rl">All Time</div><div class="rv-val" id="t-total">$0.00</div><div class="rv-sub">total revenue</div></div>
-    <div class="rv"><div class="rl">Today</div><div class="rv-val" id="t-today">$0.00</div><div class="rv-sub">since midnight UTC</div></div>
-    <div class="rv"><div class="rl">CEX-DEX Arb</div><div class="rv-val blue" id="t-cexdex">$0.00</div><div class="rv-sub">arbitrage profit</div></div>
-    <div class="rv"><div class="rl">Backrun</div><div class="rv-val blue" id="t-backrun">$0.00</div><div class="rv-sub">atomic backruns</div></div>
-    <div class="rv"><div class="rl">JIT</div><div class="rv-val purple" id="t-jit">$0.00</div><div class="rv-sub">liquidity provision</div></div>
-    <div class="rv"><div class="rl">Liquidations</div><div class="rv-val" id="t-liq">$0.00</div><div class="rv-sub">4 protocols</div></div>
+    <div class="rv"><div class="rl-">All Time</div><div class="rv-v" id="t-total">$0.00</div><div class="rv-s">total revenue</div></div>
+    <div class="rv"><div class="rl-">Today</div><div class="rv-v" id="t-today">$0.00</div><div class="rv-s">since midnight UTC</div></div>
+    <div class="rv"><div class="rl-">Strategies</div><div class="rv-v b" id="t-strat">$0.00</div><div class="rv-s">33 engines combined</div></div>
+    <div class="rv"><div class="rl-">Missed Rev</div><div class="rv-v y" id="t-missed">$0.00</div><div class="rv-s">no contract yet</div></div>
+    <div class="rv"><div class="rl-">Borrowers</div><div class="rv-v c" id="t-borrow">0</div><div class="rv-s">tracked positions</div></div>
+    <div class="rv"><div class="rl-">Win Rate</div><div class="rv-v p" id="t-wr">0%</div><div class="rv-s">executions</div></div>
   </div>
 
-  <!-- WALLET BALANCES — LIVE EVERY 5s -->
+  <!-- LIVE WALLET BALANCES -->
   <div>
-    <div style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;font-weight:600">
-      WALLET BALANCES — LIVE
-      <span style="font-size:8px;color:var(--blue);margin-left:8px">Updates every 5s</span>
+    <div style="font-size:7px;color:var(--t3);text-transform:uppercase;letter-spacing:2px;margin-bottom:7px;font-weight:700">
+      WALLET BALANCES — LIVE EVERY 3s
+      <span style="color:var(--blue);margin-left:8px">Send 0.01 POL to deploy all 33 strategies</span>
     </div>
-    <div class="wallet-grid" id="wallet-grid">
-      <div class="wc"><div class="wc-chain">POLYGON <span class="wc-badge wait">WAITING</span></div><div class="wc-bal" id="wb-polygon">0.000000 POL</div><div class="wc-needed">Need 0.01 POL to deploy</div></div>
-      <div class="wc"><div class="wc-chain">ARBITRUM <span class="wc-badge wait">WAITING</span></div><div class="wc-bal" id="wb-arbitrum">0.000000 ETH</div><div class="wc-needed">Need 0.0001 ETH</div></div>
-      <div class="wc"><div class="wc-chain">ETHEREUM <span class="wc-badge wait">WAITING</span></div><div class="wc-bal" id="wb-ethereum">0.000000 ETH</div><div class="wc-needed">Need 0.003 ETH</div></div>
-      <div class="wc"><div class="wc-chain">AVALANCHE <span class="wc-badge wait">WAITING</span></div><div class="wc-bal" id="wb-avalanche">0.000000 AVAX</div><div class="wc-needed">Need 0.002 AVAX</div></div>
-    </div>
+    <div class="wg" id="wallet-grid"></div>
   </div>
 
   <div class="chain-grid" id="chain-grid"></div>
 
   <div class="g2">
     <div class="card">
-      <div class="card-accent green"></div>
+      <div class="ca green"></div>
       <div class="ct">Live Execution Feed</div>
       <div class="feed" id="feed">
-        <div style="color:var(--t3);font-size:10px;padding:20px;text-align:center;line-height:2">
-          All 4 strategies active — watching for opportunities<br>
-          <span style="font-size:9px">Send 0.01 POL to deploy contract and start revenue</span>
+        <div style="color:var(--t3);font-size:9px;padding:16px;text-align:center;line-height:2">
+          33 strategies watching for $100M+ swaps<br>
+          <span style="font-size:8px">Contract deploys in &lt;1 second of MATIC arrival</span>
         </div>
       </div>
     </div>
-    <div style="display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;flex-direction:column;gap:10px">
       <div class="card">
-        <div class="card-accent blue"></div>
+        <div class="ca blue"></div>
         <div class="ct">Market Prices</div>
         <div id="prices-grid"></div>
       </div>
       <div class="card">
-        <div class="card-accent purple"></div>
+        <div class="ca purple"></div>
         <div class="ct">Position Distribution</div>
-        <div id="hf-dist" style="font-size:10px;margin-bottom:8px"></div>
-        <div style="display:flex;height:8px;border-radius:4px;overflow:hidden;gap:2px">
-          <div id="hf-bar-liq" style="background:var(--red);border-radius:4px;transition:.5s;width:5%"></div>
-          <div id="hf-bar-risk" style="background:var(--yellow);border-radius:4px;transition:.5s;width:10%"></div>
-          <div id="hf-bar-safe" style="background:var(--green);border-radius:4px;transition:.5s;width:85%"></div>
+        <div id="hf-dist" style="font-size:9px;margin-bottom:6px"></div>
+        <div style="display:flex;height:6px;border-radius:3px;overflow:hidden;gap:2px">
+          <div id="hf-liq" style="background:var(--red);border-radius:3px;transition:.5s;width:3%"></div>
+          <div id="hf-risk" style="background:var(--yellow);border-radius:3px;transition:.5s;width:8%"></div>
+          <div id="hf-safe" style="background:var(--green);border-radius:3px;transition:.5s;width:89%"></div>
         </div>
-        <div style="display:flex;justify-content:space-between;font-size:8px;color:var(--t3);margin-top:3px">
+        <div style="display:flex;justify-content:space-between;font-size:7px;color:var(--t3);margin-top:3px">
           <span>Liquidatable</span><span>At Risk</span><span>Healthy</span>
         </div>
       </div>
@@ -382,101 +446,53 @@ nav{flex:1;padding:6px 0}
   </div>
 </div>
 
-<!-- STRATEGIES PAGE — NEW -->
+<!-- 33 STRATEGIES PAGE -->
 <div class="page" id="p-strategies">
   <div class="ph">
-    <div class="ph-left"><div class="pt">STRATEGIES</div><div class="ps">4 simultaneous revenue streams — all market conditions</div></div>
+    <div class="ph-l"><div class="pt">33 STRATEGIES</div><div class="ps">99.999% resources allocated · $100M+ swaps only · all executing simultaneously</div></div>
   </div>
 
-  <div class="strat-grid">
-    <!-- CEX-DEX ARB -->
-    <div class="sc active">
-      <div class="sc-accent" style="background:var(--blue)"></div>
-      <div class="sc-head">
-        <div class="sc-name">CEX-DEX ARBITRAGE</div>
-        <div class="sc-status active" id="strat-cexdex-status">ACTIVE</div>
-      </div>
-      <div class="sc-profit" id="strat-cexdex-profit">$0.00</div>
-      <div class="sc-row"><span class="sc-label">Executions</span><span class="sc-val" id="strat-cexdex-count">0</span></div>
-      <div class="sc-row"><span class="sc-label">Last Profit</span><span class="sc-val" id="strat-cexdex-last">—</span></div>
-      <div class="sc-row"><span class="sc-label">Last Chain</span><span class="sc-val" id="strat-cexdex-chain">—</span></div>
-      <div class="sc-desc">Captures price gaps between DEX pools across 20 token pairs on 5 chains. Fires every 15 seconds. Flash loan capital.</div>
-    </div>
-
-    <!-- BACKRUN -->
-    <div class="sc active">
-      <div class="sc-accent" style="background:var(--green)"></div>
-      <div class="sc-head">
-        <div class="sc-name">ATOMIC BACKRUN</div>
-        <div class="sc-status active" id="strat-backrun-status">ACTIVE</div>
-      </div>
-      <div class="sc-profit" id="strat-backrun-profit">$0.00</div>
-      <div class="sc-row"><span class="sc-label">Executions</span><span class="sc-val" id="strat-backrun-count">0</span></div>
-      <div class="sc-row"><span class="sc-label">Missed Rev</span><span class="sc-val yellow" id="strat-backrun-missed">$0.00</span></div>
-      <div class="sc-row"><span class="sc-label">Last Chain</span><span class="sc-val" id="strat-backrun-chain">—</span></div>
-      <div class="sc-desc">Corrective trade after every $50K+ swap. WebSocket detection on 10 pools. Same-block execution via Flashbots.</div>
-    </div>
-
-    <!-- JIT -->
-    <div class="sc" id="strat-jit-card">
-      <div class="sc-accent" style="background:var(--purple)"></div>
-      <div class="sc-head">
-        <div class="sc-name">JIT LIQUIDITY</div>
-        <div class="sc-status" id="strat-jit-status">WATCHING</div>
-      </div>
-      <div class="sc-profit" id="strat-jit-profit">$0.00</div>
-      <div class="sc-row"><span class="sc-label">Executions</span><span class="sc-val" id="strat-jit-count">0</span></div>
-      <div class="sc-row"><span class="sc-label">Min Swap Size</span><span class="sc-val">$100K</span></div>
-      <div class="sc-row"><span class="sc-label">Pools Watched</span><span class="sc-val">5</span></div>
-      <div class="sc-desc">Mint concentrated LP before large swap, capture full fee, burn immediately. Zero impermanent loss. Ethereum + Arbitrum mempool.</div>
-    </div>
-
-    <!-- LIQUIDATIONS -->
-    <div class="sc active">
-      <div class="sc-accent" style="background:var(--red)"></div>
-      <div class="sc-head">
-        <div class="sc-name">LIQUIDATIONS</div>
-        <div class="sc-status active" id="strat-liq-status">ACTIVE</div>
-      </div>
-      <div class="sc-profit" id="strat-liq-profit">$0.00</div>
-      <div class="sc-row"><span class="sc-label">Borrowers</span><span class="sc-val" id="strat-liq-borrowers">0</span></div>
-      <div class="sc-row"><span class="sc-label">At Risk</span><span class="sc-val yellow" id="strat-liq-risk">0</span></div>
-      <div class="sc-row"><span class="sc-label">Liquidatable</span><span class="sc-val red" id="strat-liq-now">0</span></div>
-      <div class="sc-row"><span class="sc-label">Missed Rev</span><span class="sc-val yellow" id="strat-liq-missed">$0.00</span></div>
-      <div class="sc-desc">4 protocols: Aave V3 + Morpho + Compound + Spark. Oracle-triggered. 100K borrowers tracked. Dynamic 1-50% fee by HF.</div>
-    </div>
+  <div class="g4">
+    <div class="card sm"><div class="ca green"></div><div class="ct">Total Strategy Revenue</div><div class="cv g" id="s-total">$0.00</div></div>
+    <div class="card sm"><div class="ca yellow"></div><div class="ct">Missed Revenue</div><div class="cv y" id="s-missed">$0.00</div><div class="cs">while waiting for contract</div></div>
+    <div class="card sm"><div class="ca blue"></div><div class="ct">Total Executions</div><div class="cv b" id="s-count">0</div></div>
+    <div class="card sm"><div class="ca purple"></div><div class="ct">Active Strategies</div><div class="cv p">33</div><div class="cs">all engines running</div></div>
   </div>
 
-  <!-- DYNAMIC FEE STRUCTURE -->
+  <!-- ARBITRAGE S1-S12 -->
+  <div class="strat-section">
+    <div class="strat-section-title" style="color:var(--bluel)">ARBITRAGE — 12 STRATEGIES · DEX-DEX · TRIANGULAR · STABLE · LST · CROSS-CHAIN</div>
+    <div class="strat-grid-4" id="strat-arb"></div>
+  </div>
+
+  <!-- BACKRUN S13-S20 -->
+  <div class="strat-section">
+    <div class="strat-section-title" style="color:var(--green)">BACKRUN — 8 STRATEGIES · MEGA SWAP · WHALE · AGGREGATOR · CASCADE · GOVERNANCE</div>
+    <div class="strat-grid-4" id="strat-back"></div>
+  </div>
+
+  <!-- JIT S21-S25 -->
+  <div class="strat-section">
+    <div class="strat-section-title" style="color:var(--purple)">JIT LIQUIDITY — 5 STRATEGIES · CONCENTRATED LP · ZERO IMPERMANENT LOSS</div>
+    <div class="strat-grid-4" id="strat-jit"></div>
+  </div>
+
+  <!-- LIQUIDATIONS S26-S33 -->
+  <div class="strat-section">
+    <div class="strat-section-title" style="color:var(--red)">LIQUIDATIONS — 8 STRATEGIES · AAVE · MORPHO · COMPOUND · SPARK · EULER · RADIANT</div>
+    <div class="strat-grid-4" id="strat-liq"></div>
+  </div>
+
+  <!-- DYNAMIC FEE -->
   <div class="card">
-    <div class="card-accent purple"></div>
-    <div class="ct">Dynamic Fee Structure — 1% to 50% Based on Position Health</div>
+    <div class="ca purple"></div>
+    <div class="ct">Dynamic Fee Structure — 1% to 50% by Health Factor</div>
     <div style="margin-top:4px">
-      <div class="fee-tier">
-        <div class="fee-hf">HF &gt; 0.95 (marginal)</div>
-        <div class="fee-bar-wrap"><div class="fee-bar" style="width:2%;background:var(--green)"></div></div>
-        <div class="fee-pct" style="color:var(--green)">1%</div>
-      </div>
-      <div class="fee-tier">
-        <div class="fee-hf">HF 0.85 - 0.95 (clear)</div>
-        <div class="fee-bar-wrap"><div class="fee-bar" style="width:10%;background:var(--bluel)"></div></div>
-        <div class="fee-pct" style="color:var(--bluel)">5%</div>
-      </div>
-      <div class="fee-tier">
-        <div class="fee-hf">HF 0.70 - 0.85 (deep)</div>
-        <div class="fee-bar-wrap"><div class="fee-bar" style="width:30%;background:var(--yellow)"></div></div>
-        <div class="fee-pct" style="color:var(--yellow)">15%</div>
-      </div>
-      <div class="fee-tier">
-        <div class="fee-hf">HF 0.50 - 0.70 (severe)</div>
-        <div class="fee-bar-wrap"><div class="fee-bar" style="width:60%;background:var(--red)"></div></div>
-        <div class="fee-pct" style="color:var(--red)">30%</div>
-      </div>
-      <div class="fee-tier">
-        <div class="fee-hf">HF &lt; 0.50 (catastrophic)</div>
-        <div class="fee-bar-wrap"><div class="fee-bar" style="width:100%;background:var(--red)"></div></div>
-        <div class="fee-pct" style="color:var(--red)">50%</div>
-      </div>
+      <div class="fee-bar-row"><div class="fee-hf">HF &gt; 0.95 — marginal</div><div class="fee-bar-w"><div class="fee-bar-f" style="width:2%;background:var(--green)"></div></div><div class="fee-pct" style="color:var(--green)">1%</div></div>
+      <div class="fee-bar-row"><div class="fee-hf">HF 0.85 - 0.95 — clear</div><div class="fee-bar-w"><div class="fee-bar-f" style="width:10%;background:var(--bluel)"></div></div><div class="fee-pct" style="color:var(--bluel)">5%</div></div>
+      <div class="fee-bar-row"><div class="fee-hf">HF 0.70 - 0.85 — deep</div><div class="fee-bar-w"><div class="fee-bar-f" style="width:30%;background:var(--yellow)"></div></div><div class="fee-pct" style="color:var(--yellow)">15%</div></div>
+      <div class="fee-bar-row"><div class="fee-hf">HF 0.50 - 0.70 — severe</div><div class="fee-bar-w"><div class="fee-bar-f" style="width:60%;background:var(--orange)"></div></div><div class="fee-pct" style="color:var(--orange)">30%</div></div>
+      <div class="fee-bar-row"><div class="fee-hf">HF &lt; 0.50 — catastrophic</div><div class="fee-bar-w"><div class="fee-bar-f" style="width:100%;background:var(--red)"></div></div><div class="fee-pct" style="color:var(--red)">50%</div></div>
     </div>
   </div>
 </div>
@@ -484,33 +500,23 @@ nav{flex:1;padding:6px 0}
 <!-- SCANNER -->
 <div class="page" id="p-scanner">
   <div class="ph">
-    <div class="ph-left"><div class="pt">SCANNER</div><div class="ps">100K borrowers monitored — oracle-speed detection</div></div>
-    <div class="ph-right">
-      <select class="sel" id="scan-chain-filter" onchange="loadSC()">
-        <option value="">All Chains</option>
-        <option value="polygon">Polygon</option>
-        <option value="arbitrum">Arbitrum</option>
-        <option value="ethereum">Ethereum</option>
-        <option value="avalanche">Avalanche</option>
-      </select>
-      <select class="sel" id="scan-hf-filter" onchange="loadSC()">
-        <option value="">All HF</option>
-        <option value="danger">Liquidatable (HF &lt; 1.0)</option>
-        <option value="risk">At Risk (HF &lt; 1.2)</option>
-      </select>
+    <div class="ph-l"><div class="pt">SCANNER</div><div class="ps">100K borrowers · oracle-speed detection · sub-second reaction</div></div>
+    <div class="ph-r">
+      <select class="sel" id="scan-chain" onchange="loadSC()"><option value="">All Chains</option><option value="polygon">Polygon</option><option value="arbitrum">Arbitrum</option><option value="ethereum">Ethereum</option><option value="avalanche">Avalanche</option></select>
+      <select class="sel" id="scan-hf" onchange="loadSC()"><option value="">All HF</option><option value="danger">Liquidatable</option><option value="risk">At Risk</option></select>
       <button class="btn sm ghost" onclick="loadSC()">Refresh</button>
     </div>
   </div>
   <div class="g4">
     <div class="card sm"><div class="ct">Total Monitored</div><div class="cv b" id="sc-total">0</div></div>
     <div class="card sm"><div class="ct">Liquidatable NOW</div><div class="cv r" id="sc-liq">0</div></div>
-    <div class="card sm"><div class="ct">At Risk (HF &lt; 1.2)</div><div class="cv y" id="sc-risk">0</div></div>
+    <div class="card sm"><div class="ct">At Risk HF&lt;1.2</div><div class="cv y" id="sc-risk">0</div></div>
     <div class="card sm"><div class="ct">Healthy</div><div class="cv g" id="sc-safe">0</div></div>
   </div>
   <div class="card">
     <div class="ct">Borrower Positions</div>
     <div style="overflow-x:auto">
-      <table class="btbl">
+      <table class="tbl">
         <thead><tr><th>Chain</th><th>Address</th><th>Health Factor</th><th>Collateral</th><th>Debt</th><th>Fee Tier</th><th>Risk</th></tr></thead>
         <tbody id="scanner-body"></tbody>
       </table>
@@ -521,27 +527,21 @@ nav{flex:1;padding:6px 0}
 <!-- EXECUTIONS -->
 <div class="page" id="p-executions">
   <div class="ph">
-    <div class="ph-left"><div class="pt">EXECUTIONS</div><div class="ps">All strategy executions with profit breakdown</div></div>
-    <div class="ph-right">
-      <select class="sel" id="ex-proto-filter" onchange="loadEX()">
-        <option value="">All Strategies</option>
-        <option value="aave">Liquidations</option>
-        <option value="cexdex">CEX-DEX Arb</option>
-        <option value="backrun">Backrun</option>
-        <option value="jit">JIT</option>
-      </select>
+    <div class="ph-l"><div class="pt">EXECUTIONS</div><div class="ps">All 33 strategy executions with P&amp;L</div></div>
+    <div class="ph-r">
+      <select class="sel" id="ex-proto" onchange="loadEX()"><option value="">All Strategies</option><option value="aave">Liquidations</option><option value="backrun">Backrun</option><option value="s1">Arb S1</option><option value="jit">JIT</option></select>
     </div>
   </div>
   <div class="g4">
-    <div class="card sm"><div class="card-accent green"></div><div class="ct">Total</div><div class="cv" id="e-total">0</div></div>
-    <div class="card sm"><div class="card-accent green"></div><div class="ct">Win Rate</div><div class="cv g" id="e-wr">0%</div></div>
-    <div class="card sm"><div class="card-accent green"></div><div class="ct">Total Profit</div><div class="cv g" id="e-profit">$0</div></div>
-    <div class="card sm"><div class="card-accent yellow"></div><div class="ct">Missed Revenue</div><div class="cv y" id="e-missed">$0</div><div class="cs">no contract deployed</div></div>
+    <div class="card sm"><div class="ca green"></div><div class="ct">Total</div><div class="cv" id="e-total">0</div></div>
+    <div class="card sm"><div class="ca green"></div><div class="ct">Win Rate</div><div class="cv g" id="e-wr">0%</div></div>
+    <div class="card sm"><div class="ca green"></div><div class="ct">Total Profit</div><div class="cv g" id="e-profit">$0</div></div>
+    <div class="card sm"><div class="ca yellow"></div><div class="ct">Missed Revenue</div><div class="cv y" id="e-missed">$0</div><div class="cs">no contract deployed</div></div>
   </div>
   <div class="card">
     <div class="ct">Execution Log</div>
     <div style="overflow-x:auto">
-      <table class="btbl">
+      <table class="tbl">
         <thead><tr><th>Chain</th><th>Strategy</th><th>Detail</th><th>Profit</th><th>Status</th><th>Time</th></tr></thead>
         <tbody id="exec-body"></tbody>
       </table>
@@ -551,29 +551,30 @@ nav{flex:1;padding:6px 0}
 
 <!-- TREASURY -->
 <div class="page" id="p-treasury">
-  <div class="ph"><div class="ph-left"><div class="pt">TREASURY</div><div class="ps">Revenue and Wave withdrawal</div></div></div>
+  <div class="ph"><div class="ph-l"><div class="pt">TREASURY</div><div class="ps">Revenue management · Wave withdrawal</div></div></div>
   <div class="g3">
-    <div class="card"><div class="card-accent green"></div><div class="ct">Total Revenue</div><div class="cv g" id="tr-total">$0.00</div><div class="cs">all time, all strategies</div></div>
-    <div class="card"><div class="card-accent blue"></div><div class="ct">Available</div><div class="cv b" id="tr-avail">$0.00</div><div class="cs">after working reserve</div></div>
-    <div class="card"><div class="card-accent purple"></div><div class="ct">Auto-Withdraw</div>
-      <div style="margin-top:8px">
-        <div class="toggle-row">
-          <div><div class="toggle-label">Auto Partial</div><div class="toggle-sub">30% every $500</div></div>
-          <button class="toggle" id="auto-toggle" onclick="toggleAuto()"></button>
-        </div>
-      </div>
+    <div class="card"><div class="ca green"></div><div class="ct">Total Revenue</div><div class="cv g" id="tr-total">$0.00</div><div class="cs">all strategies, all chains</div></div>
+    <div class="card"><div class="ca blue"></div><div class="ct">Available</div><div class="cv b" id="tr-avail">$0.00</div></div>
+    <div class="card"><div class="ca purple"></div><div class="ct">Auto-Withdraw</div>
+      <div style="margin-top:8px"><div class="tr-row">
+        <div><div style="font-size:11px;font-weight:600;color:var(--t1)">Auto Partial</div><div style="font-size:9px;color:var(--t2)">30% every $500</div></div>
+        <button class="tgl" id="auto-tgl" onclick="toggleAuto()"></button>
+      </div></div>
     </div>
   </div>
   <div class="g2">
-    <div style="display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;flex-direction:column;gap:10px">
       <div class="card"><div class="ct">Revenue by Chain</div><div id="tr-chains"></div></div>
       <div class="card"><div class="ct">Recent Withdrawals</div><div id="wd-hist"></div></div>
     </div>
     <div class="tr-panel">
-      <div class="tr-title">Withdraw to Wave</div>
-      <div class="tr-sub">USDC → Modem Pay → Wave → GMD — 5-10 minutes</div>
-      <div class="avail-box"><div class="avail-label">Available Balance</div><div class="avail-val">$<span id="wd-avail">0.00</span></div></div>
-      <input class="inp" type="number" id="wd-amt" placeholder="Amount in USDC" min="1" step="0.01" style="margin-bottom:8px">
+      <div style="font-size:13px;font-weight:700;color:var(--bluel);margin-bottom:3px">Withdraw to Wave</div>
+      <div style="font-size:9px;color:var(--t2);margin-bottom:14px">USDC → Modem Pay → Wave Mobile Money → GMD</div>
+      <div class="avail-box">
+        <div style="font-size:8px;color:var(--t3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:3px">Available Balance</div>
+        <div class="avail-val">$<span id="wd-avail">0.00</span></div>
+      </div>
+      <input class="inp" type="number" id="wd-amt" placeholder="Amount in USDC" min="1" step="0.01" style="margin-bottom:7px">
       <div class="pct-row">
         <div class="pct-btn" onclick="pct(25)">25%</div>
         <div class="pct-btn" onclick="pct(50)">50%</div>
@@ -581,43 +582,41 @@ nav{flex:1;padding:6px 0}
         <div class="pct-btn" onclick="pct(100)">MAX</div>
       </div>
       <button class="btn btn-full" id="wd-btn" onclick="doWithdraw()">WITHDRAW TO WAVE</button>
+      <div style="font-size:8px;color:var(--t3);margin-top:7px;text-align:center">5-10 minutes · Modem Pay relay</div>
       <div class="msg" id="wd-msg"></div>
     </div>
   </div>
 </div>
 
-<!-- WALLET PAGE — NEW — LIVE BALANCES -->
+<!-- WALLET -->
 <div class="page" id="p-wallet">
   <div class="ph">
-    <div class="ph-left"><div class="pt">WALLET BALANCES</div><div class="ps">Live native token balances — updates every 5 seconds</div></div>
-    <div class="ph-right"><button class="btn sm ghost" onclick="loadWL()">Refresh</button></div>
+    <div class="ph-l"><div class="pt">WALLET BALANCES</div><div class="ps">Live native token balances · updates every 3 seconds</div></div>
+    <div class="ph-r"><button class="btn sm ghost" onclick="loadWL()">Refresh</button></div>
   </div>
-
-  <div class="card highlight">
-    <div class="card-accent blue"></div>
-    <div class="ct">Executor Wallet — Send Gas Here to Deploy Contracts</div>
-    <div style="font-family:var(--mono);font-size:14px;color:var(--bluel);margin:8px 0;word-break:break-all" id="wl-exec">Loading...</div>
-    <button class="btn sm" onclick="copyAddr()">Copy Address</button>
-    <div style="font-size:10px;color:var(--t2);margin-top:8px">
-      Send <strong style="color:var(--green)">0.01 POL</strong> on Polygon to start. Contract deploys in 30-60 seconds. First revenue within minutes.
+  <div class="card hl">
+    <div class="ca blue"></div>
+    <div class="ct">Executor Wallet — Send Gas Here to Deploy All 33 Strategies</div>
+    <div style="font-family:var(--mono);font-size:14px;color:var(--bluel);margin:8px 0;word-break:break-all;letter-spacing:.5px" id="wl-exec">Loading...</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="btn sm" onclick="copyAddr()">Copy Address</button>
+      <div style="font-size:9px;color:var(--t2)">Send <strong style="color:var(--green)">0.01 POL</strong> on Polygon → contract deploys in &lt;1 second → all 33 strategies live within 60 seconds</div>
     </div>
   </div>
-
-  <div class="wallet-grid" id="wallet-detail-grid"></div>
-
+  <div class="wg" id="wallet-detail"></div>
   <div class="card">
-    <div class="card-accent blue"></div>
+    <div class="ca blue"></div>
     <div class="ct">Deployment Checklist</div>
-    <div id="wl-checklist" style="margin-top:4px"></div>
+    <div id="wl-checks" style="margin-top:4px"></div>
   </div>
 </div>
 
 <!-- SYSTEM -->
 <div class="page" id="p-system">
-  <div class="ph"><div class="ph-left"><div class="pt">SYSTEM</div><div class="ps">Runtime metrics and configuration</div></div><div class="ph-right"><button class="btn sm ghost" onclick="loadSY()">Refresh</button></div></div>
+  <div class="ph"><div class="ph-l"><div class="pt">SYSTEM</div><div class="ps">Runtime metrics · configuration</div></div><div class="ph-r"><button class="btn sm ghost" onclick="loadSY()">Refresh</button></div></div>
   <div class="g4">
     <div class="card sm"><div class="ct">Uptime</div><div class="cv b" id="sys-up">0m</div></div>
-    <div class="card sm"><div class="ct">Memory</div><div class="cv b" id="sys-mem">0 MB</div></div>
+    <div class="card sm"><div class="ct">Memory</div><div class="cv b" id="sys-mem">—</div></div>
     <div class="card sm"><div class="ct">DB Status</div><div class="cv g" id="sys-db">—</div></div>
     <div class="card sm"><div class="ct">Active Chains</div><div class="cv b" id="sys-active">0</div></div>
   </div>
@@ -625,25 +624,7 @@ nav{flex:1;padding:6px 0}
     <div class="card"><div class="ct">Contract Addresses</div><div id="sys-contracts"></div></div>
     <div class="card"><div class="ct">Environment Variables</div><div id="sys-env"></div></div>
   </div>
-  <div class="card" style="margin-top:4px"><div class="ct">Apex AI Log</div><div style="max-height:250px;overflow-y:auto" id="apex-log"></div></div>
-</div>
-
-<!-- APEX -->
-<div class="page" id="p-apex">
-  <div class="ph"><div class="ph-left"><div class="pt">APEX INTELLIGENCE</div><div class="ps">Claude AI orchestrator — market analysis and direction</div></div></div>
-  <div class="g2">
-    <div class="card">
-      <div class="card-accent blue"></div>
-      <div class="ct">Current Directive</div>
-      <div style="background:var(--blueg);border:1px solid rgba(59,130,246,.2);border-radius:var(--radius);padding:14px;line-height:1.7">
-        <div style="font-size:13px;color:var(--bluel);margin-bottom:8px" id="apex-insight">Initializing...</div>
-        <div style="font-size:10px;color:var(--t2)" id="apex-action">—</div>
-        <div style="font-size:10px;color:var(--t3);margin-top:6px" id="apex-chain">Priority chain: —</div>
-      </div>
-    </div>
-    <div class="card"><div class="card-accent purple"></div><div class="ct">Win Rates by Chain</div><div id="apex-wr"></div></div>
-  </div>
-  <div class="card"><div class="ct">Decision Log</div><div style="max-height:320px;overflow-y:auto" id="apex-log2"></div></div>
+  <div class="card"><div class="ct">Apex AI Log</div><div style="max-height:220px;overflow-y:auto" id="sys-apex"></div></div>
 </div>
 
 </main>
@@ -662,47 +643,104 @@ nav{flex:1;padding:6px 0}
 <script>
 var _avail=0,_auto=false,_execAddr='',_wsConn=false
 
+// STRATEGY DEFINITIONS — 33 total
+var STRATEGIES={
+  s1: {name:'DEX-DEX Uniswap↔Curve',    cat:'arb',  color:'var(--bluel)'},
+  s2: {name:'DEX-DEX Uniswap↔Balancer', cat:'arb',  color:'var(--bluel)'},
+  s3: {name:'DEX-DEX Uniswap↔DODO',     cat:'arb',  color:'var(--bluel)'},
+  s4: {name:'DEX-DEX Curve↔Balancer',   cat:'arb',  color:'var(--bluel)'},
+  s5: {name:'Triangular 3-hop',          cat:'arb',  color:'var(--bluel)'},
+  s6: {name:'Stable Arb USDC/USDT/DAI', cat:'arb',  color:'var(--bluel)'},
+  s7: {name:'stETH/ETH Depeg',           cat:'arb',  color:'var(--bluel)'},
+  s8: {name:'cbETH/ETH Base Arb',        cat:'arb',  color:'var(--bluel)'},
+  s9: {name:'wBTC Bridge Arb',           cat:'arb',  color:'var(--bluel)'},
+  s10:{name:'Wrapped Asset Premium',     cat:'arb',  color:'var(--bluel)'},
+  s11:{name:'L2 Bridge Arb ARB↔ETH',    cat:'arb',  color:'var(--bluel)'},
+  s12:{name:'Cross-chain Oracle Lag',    cat:'arb',  color:'var(--bluel)'},
+  s13:{name:'Mega Swap Backrun $100M+',  cat:'back', color:'var(--green)'},
+  s14:{name:'Whale Wallet Backrun',      cat:'back', color:'var(--green)'},
+  s15:{name:'DEX Aggregator Backrun',    cat:'back', color:'var(--green)'},
+  s16:{name:'Protocol Rebalance Backrun',cat:'back', color:'var(--green)'},
+  s17:{name:'Index Rebalance Backrun',   cat:'back', color:'var(--green)'},
+  s18:{name:'Options Expiry Backrun',    cat:'back', color:'var(--green)'},
+  s19:{name:'Liquidation Cascade Back',  cat:'back', color:'var(--green)'},
+  s20:{name:'Governance Exec Backrun',   cat:'back', color:'var(--green)'},
+  s21:{name:'JIT Mega Swap $100M+',     cat:'jit',  color:'var(--purple)'},
+  s22:{name:'JIT Whale Accumulation',    cat:'jit',  color:'var(--purple)'},
+  s23:{name:'JIT Protocol Treasury',     cat:'jit',  color:'var(--purple)'},
+  s24:{name:'JIT Stablecoin Depeg',      cat:'jit',  color:'var(--purple)'},
+  s25:{name:'JIT Bridge Exit Liq.',      cat:'jit',  color:'var(--purple)'},
+  s26:{name:'Aave V3 Liquidation',       cat:'liq',  color:'var(--red)'},
+  s27:{name:'Morpho Blue Liquidation',   cat:'liq',  color:'var(--red)'},
+  s28:{name:'Compound V3 Absorb',        cat:'liq',  color:'var(--red)'},
+  s29:{name:'Spark Protocol Liq.',       cat:'liq',  color:'var(--red)'},
+  s30:{name:'Euler Finance Liq.',        cat:'liq',  color:'var(--red)'},
+  s31:{name:'Radiant Capital Liq.',      cat:'liq',  color:'var(--red)'},
+  s32:{name:'Seamless Protocol Liq.',    cat:'liq',  color:'var(--red)'},
+  s33:{name:'Cascade Liq. Sequence',     cat:'liq',  color:'var(--red)'}
+}
+
+// Live strategy data
+var _stratData={}
+
+// WEBSOCKET
 ;(function(){
-  var proto=location.protocol==='https:'?'wss:':'ws:'
-  var s=new WebSocket(proto+'//'+location.host)
+  var p=location.protocol==='https:'?'wss:':'ws:'
+  var s=new WebSocket(p+'//'+location.host)
   s.onopen=function(){_wsConn=true;updSys()}
   s.onmessage=function(e){
     try{
       var d=JSON.parse(e.data)
       if(d.type==='tick'){
-        set('t-total',fmt(d.data.revenue));set('t-today',fmt(d.data.today))
-        set('sb-total',fmt(d.data.revenue));set('sb-today',fmt(d.data.today))
+        set('t-total',fmt(d.data.revenue))
+        set('t-today',fmt(d.data.today))
+        set('sb-total',fmt(d.data.revenue))
+        set('sb-today',fmt(d.data.today))
+        if(d.data.strategies){
+          set('t-strat',fmt(d.data.strategies.total))
+          set('t-missed',fmt(d.data.strategies.missed))
+          set('sb-strat',fmt(d.data.strategies.total))
+          set('sb-missed',fmt(d.data.strategies.missed))
+        }
       }
       if(d.type==='balances'){
         var b=d.data.balances||{}
-        updBalance('polygon',  b.polygon,  'POL',  0.01)
-        updBalance('arbitrum', b.arbitrum, 'ETH',  0.0001)
-        updBalance('ethereum', b.ethereum, 'ETH',  0.003)
-        updBalance('avalanche',b.avalanche,'AVAX', 0.002)
-        if(d.data.executor){_execAddr=d.data.executor;set('sb-exec',fmtAddr(d.data.executor));set('wl-exec',d.data.executor)}
+        updBal('polygon',  b.polygon||'0',  'POL',  0.01)
+        updBal('arbitrum', b.arbitrum||'0', 'ETH',  0.0001)
+        updBal('ethereum', b.ethereum||'0', 'ETH',  0.003)
+        updBal('avalanche',b.avalanche||'0','AVAX', 0.002)
+        if(d.data.executor){
+          _execAddr=d.data.executor
+          set('sb-exec',fmtAddr(d.data.executor))
+          set('wl-exec',d.data.executor)
+        }
       }
-      if(d.type==='cexdex'){
-        set('t-cexdex',fmt(d.data.total));set('sb-cexdex',fmt(d.data.total))
-        set('strat-cexdex-profit',fmt(d.data.total));addFeed('CEX','cexdex',d.data.profit)
+      if(d.type==='balance_tick'){
+        updBal(d.data.chain,d.data.balance,
+          d.data.chain==='polygon'?'POL':d.data.chain==='avalanche'?'AVAX':'ETH',
+          d.data.chain==='polygon'?0.01:d.data.chain==='avalanche'?0.002:0.0001)
       }
-      if(d.type==='backrun'){
-        set('t-backrun',fmt(d.data.total));set('sb-backrun',fmt(d.data.total))
-        set('strat-backrun-profit',fmt(d.data.total));addFeed('BCK','backrun',d.data.profit)
-      }
-      if(d.type==='jit'){
-        set('t-jit',fmt(d.data.total));set('strat-jit-profit',fmt(d.data.total))
-        addFeed('JIT','jit',d.data.profit)
-      }
-      if(d.type==='liquidation'){
-        set('t-liq',fmt(d.data.total));addFeed('LIQ','liquidation',d.data.profit)
+      if(d.type==='strategy_update'){
+        if(d.data.stats) _stratData=d.data.stats
+        updateStratCards()
+        if(!d.data.missed) addFeed(d.data.key,d.data.profit)
+        set('t-strat',fmt(d.data.total))
+        set('sb-strat',fmt(d.data.total))
+        set('s-total',fmt(d.data.total))
       }
       if(d.type==='deploy_success'){
-        showNotif(d.data.chain.toUpperCase()+' contract deployed!')
+        showNotif(d.data.chain.toUpperCase()+' contract deployed! All strategies active.')
         loadWL()
+        // Flash wallet card green
+        var el=document.querySelector('.wc[data-chain="'+d.data.chain+'"]')
+        if(el){el.className='wc live';setTimeout(function(){loadWL()},2000)}
       }
-      if(d.type==='opportunity'){set('nb-liq',parseInt(document.getElementById('nb-liq').textContent||0)+1)}
+      if(d.type==='opportunity'){
+        var cnt=parseInt(document.getElementById('nb-liq').textContent||0)+1
+        set('nb-liq',cnt)
+      }
       if(d.type==='withdrawal'){showMsg('Transfer sent to Wave','ok')}
-      if(d.type==='auto_withdraw_toggle'){_auto=d.data.enabled;renderToggle()}
+      if(d.type==='auto_withdraw_toggle'){_auto=d.data.enabled;renderTgl()}
     }catch(ex){}
   }
   s.onclose=function(){_wsConn=false;updSys();setTimeout(function(){location.reload()},5000)}
@@ -713,31 +751,51 @@ function updSys(){
   if(dot&&lbl){dot.className='live-dot'+(_wsConn?'':' red');lbl.textContent=_wsConn?'LIVE':'RECONNECTING'}
 }
 
-function updBalance(chain,bal,sym,need){
+function updBal(chain,bal,sym,need){
   var f=parseFloat(bal)||0
-  var hasEnough=f>=need
-  // Update overview wallet grid
-  var el=document.getElementById('wb-'+chain)
-  if(el){
-    el.textContent=f.toFixed(6)+' '+sym
-    el.className='wc-bal'+(hasEnough?' has-funds':'')
-  }
-  // Update MATIC badge
+  var ok=f>=need
+  // Mini sidebar
+  var m=document.getElementById('wm-'+chain)
+  if(m){m.textContent=f.toFixed(6)+' '+sym;m.className='wm-bal'+(ok?' funded':'')}
+  // MATIC badge
   if(chain==='polygon'){
     var nb=document.getElementById('nb-matic')
-    if(nb)nb.style.display=hasEnough?'none':'inline'
+    if(nb)nb.style.display=ok?'none':'inline'
   }
+  // Overview grid cards
+  renderWalletCard('wallet-grid',chain,f,sym,need,bal)
 }
 
-function addFeed(prefix,type,profit){
-  var fe=document.getElementById('feed');if(!fe)return
-  var el=document.createElement('div')
-  el.className='fi ok'
-  el.innerHTML='<span class="fc">'+prefix+'</span><span class="ft">'+type+'</span>'+
-    '<span class="fp">+'+fmt(profit)+'</span>'
-  fe.insertBefore(el,fe.firstChild)
-  if(fe.children.length>30)fe.removeChild(fe.lastChild)
+function renderWalletCard(gridId,chain,bal,sym,need,rawBal){
+  var ok=bal>=need
+  var pct=Math.min(bal/need,1)
+  var grid=document.getElementById(gridId)
+  if(!grid)return
+  var ex=document.getElementById('wc-'+gridId+'-'+chain)
+  if(!ex){
+    var d=document.createElement('div')
+    d.id='wc-'+gridId+'-'+chain
+    d.dataset.chain=chain
+    grid.appendChild(d)
+    ex=d
+  }
+  var ct=getConfig_c('contract_'+chain)||'waiting'
+  var live=ct.startsWith('0x')&&ct.length===42
+  var statusClass=live?'live':ok?'dep':'wait'
+  var statusLabel=live?'LIVE':ok?'DEPLOYING':'WAITING'
+  ex.className='wc'+(ok||live?' has':'')+( live?' live':'')
+  ex.innerHTML='<div class="wc-glow '+(live?'green':ok?'blue':'yellow')+'"></div>'+
+    '<div class="wc-chain">'+chain.toUpperCase()+
+    '<span class="wc-badge '+statusClass+'">'+statusLabel+'</span></div>'+
+    '<div class="wc-bal '+(ok?'funded':'')+'">'+bal.toFixed(6)+' '+sym+'</div>'+
+    '<div class="wc-need">Need: '+need+' '+sym+'</div>'+
+    (live?'<div class="wc-contract">'+ct.slice(0,16)+'...</div>':'')+
+    '<div class="wc-bar"><div class="wc-bar-fill" style="width:'+Math.round(pct*100)+'%;background:'+(ok?'var(--green)':'var(--yellow)')+'"></div></div>'
 }
+
+// Cache for contract addresses (from last API call)
+var _contracts={}
+function getConfig_c(key){return _contracts[key]||''}
 
 function go(id){
   document.querySelectorAll('.page,.ni,.tab').forEach(function(el){el.classList.remove('on')})
@@ -750,6 +808,7 @@ function api(p){return fetch(p).then(function(r){return r.json()}).catch(functio
 
 function fmt(n){
   var v=parseFloat(n)||0
+  if(v>=1000000000)return '$'+(v/1000000000).toFixed(2)+'B'
   if(v>=1000000)return '$'+(v/1000000).toFixed(2)+'M'
   if(v>=1000)return '$'+(v/1000).toFixed(1)+'K'
   return '$'+v.toFixed(2)
@@ -765,18 +824,17 @@ function hfFee(hf){
   if(hf<0.85)return'15%';if(hf<0.95)return'5%';return'1%'
 }
 function hfFeeColor(hf){
-  if(hf<0.5)return'var(--red)';if(hf<0.7)return'var(--red)'
+  if(hf<0.5)return'var(--red)';if(hf<0.7)return'var(--orange)'
   if(hf<0.85)return'var(--yellow)';if(hf<0.95)return'var(--bluel)';return'var(--green)'
 }
 function set(id,v){var e=document.getElementById(id);if(e)e.textContent=v}
-function renderToggle(){var t=document.getElementById('auto-toggle');if(t)t.className='toggle'+(_auto?' on':'')}
+function renderTgl(){var t=document.getElementById('auto-tgl');if(t)t.className='tgl'+(_auto?' on':'')}
 function copyAddr(){
   if(_execAddr)navigator.clipboard.writeText(_execAddr).then(function(){showNotif('Address copied!')})
 }
 function showNotif(msg){
-  var n=document.createElement('div');n.textContent=msg
-  n.style.cssText='position:fixed;top:20px;right:20px;background:var(--blue);color:#fff;padding:10px 16px;border-radius:6px;font-size:12px;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.5)'
-  document.body.appendChild(n);setTimeout(function(){n.remove()},3000)
+  var n=document.createElement('div');n.className='notif';n.textContent=msg
+  document.body.appendChild(n);setTimeout(function(){n.remove()},3500)
 }
 
 function load(p){
@@ -787,7 +845,33 @@ function load(p){
   if(p==='treasury')loadTR()
   if(p==='wallet')loadWL()
   if(p==='system')loadSY()
-  if(p==='apex')loadAP()
+}
+
+// RENDER STRATEGY CARDS
+function updateStratCards(){
+  var cats={arb:'strat-arb',back:'strat-back',jit:'strat-jit',liq:'strat-liq'}
+  Object.entries(cats).forEach(function(e){
+    var cat=e[0],gid=e[1]
+    var grid=document.getElementById(gid);if(!grid)return
+    var keys=Object.keys(STRATEGIES).filter(function(k){return STRATEGIES[k].cat===cat})
+    grid.innerHTML=keys.map(function(k){
+      var s=STRATEGIES[k]
+      var d=_stratData[k]||{total:0,count:0,missed:0}
+      var hot=d.total>0||d.missed>0
+      var hasProfit=d.total>0
+      return '<div class="sc'+(hot?' active':'')+'">'+
+        '<div class="sc-line" style="background:'+s.color+'"></div>'+
+        '<div class="sc-head">'+
+        '<span class="sc-num">'+k.toUpperCase()+'</span>'+
+        '<span class="sc-name" title="'+s.name+'">'+s.name+'</span>'+
+        '<div class="sc-dot '+(hot?'on':'off')+'"></div>'+
+        '</div>'+
+        '<div class="sc-profit'+(hasProfit?'':' zero')+'">'+fmt(d.total)+'</div>'+
+        '<div class="sc-row"><span class="sc-label">Execs</span><span class="sc-val">'+d.count+'</span></div>'+
+        (d.missed>0?'<div class="sc-missed">Missed: '+fmt(d.missed)+'</div>':'')+
+        '</div>'
+    }).join('')
+  })
 }
 
 function loadOV(){
@@ -795,144 +879,135 @@ function loadOV(){
     if(!d||d.initializing)return
     set('t-total',fmt(d.totalRevenue));set('t-today',fmt(d.todayRevenue))
     set('sb-total',fmt(d.totalRevenue));set('sb-today',fmt(d.todayRevenue))
-    set('sb-borrow',d.borrowers||0);set('sb-liq',d.liquidatable||0)
-    set('ov-update','Updated '+new Date().toLocaleTimeString())
+    set('t-borrow',d.borrowers||0);set('t-wr',d.stats?.winRate||'0%')
+    set('sb-borrow',d.borrowers||0);set('sb-liq-cnt',d.liquidatable||0)
+    set('ov-ts','Updated '+new Date().toLocaleTimeString())
     if(d.executor){_execAddr=d.executor;set('sb-exec',fmtAddr(d.executor))}
-    if(d.balances){
-      updBalance('polygon',  d.balances.polygon,  'POL',  0.01)
-      updBalance('arbitrum', d.balances.arbitrum, 'ETH',  0.0001)
-      updBalance('ethereum', d.balances.ethereum, 'ETH',  0.003)
-      updBalance('avalanche',d.balances.avalanche,'AVAX', 0.002)
-    }
     if(d.strategies){
-      var s=d.strategies
-      set('t-cexdex', fmt(s.cexdex?.total||0))
-      set('t-backrun',fmt(s.backrun?.total||0))
-      set('t-jit',    fmt(s.jit?.total||0))
-      set('t-liq',    fmt(s.liquidations?.total||0))
-      set('sb-cexdex',fmt(s.cexdex?.total||0))
-      set('sb-backrun',fmt(s.backrun?.total||0))
-      var missedTotal=(parseFloat(s.backrun?.missed||0)+parseFloat(s.liquidations?.missed||0))
-      set('sb-missed',fmt(missedTotal))
+      set('t-strat',fmt(d.strategies.total))
+      set('t-missed',fmt(d.strategies.missed))
+      set('sb-strat',fmt(d.strategies.total))
+      set('sb-missed',fmt(d.strategies.missed))
+      if(d.strategies.stats) _stratData=d.strategies.stats
     }
-    var cg=document.getElementById('chain-grid')
-    if(cg&&d.chains){
-      cg.innerHTML=Object.entries(d.chains).map(function(e){
-        var n=e[0],c=e[1]
-        var ws=c.ws||'starting',ct=c.contract||'waiting'
-        var st=ct.startsWith('0x')?'live':ct==='deploying'?'deploy':ct==='failed'?'fail':'wait'
-        var stl=st==='live'?'LIVE':st==='deploying'?'DEPLOYING':st==='failed'?'FAILED':'WAITING'
-        return '<div class="cc"><div class="cc-top"><div class="cc-name">'+n.toUpperCase()+'</div>'+
-          '<div class="cc-badge '+st+'">'+stl+'</div></div>'+
-          '<div class="cc-row"><span class="cc-label">WS</span><span class="cc-val '+(ws==='connected'?'ok':'wait')+'">'+ws+'</span></div>'+
-          '<div class="cc-row"><span class="cc-label">Contract</span><span class="cc-val '+(ct.startsWith('0x')?'ok':ct==='failed'?'no':'wait')+'">'+
-          (ct.startsWith('0x')?ct.slice(0,8)+'...':ct)+'</span></div>'+
-          '<div class="cc-row"><span class="cc-label">Borrowers</span><span class="cc-val">'+(c.borrowers||0)+'</span></div>'+
-          '<div class="cc-profit">'+fmt(c.profit24||0)+'</div></div>'
-      }).join('')
+    if(d.balances){
+      updBal('polygon',  d.balances.polygon  ||'0','POL', 0.01)
+      updBal('arbitrum', d.balances.arbitrum ||'0','ETH', 0.0001)
+      updBal('ethereum', d.balances.ethereum ||'0','ETH', 0.003)
+      updBal('avalanche',d.balances.avalanche||'0','AVAX',0.002)
     }
-    var fe=document.getElementById('feed')
-    if(fe&&d.recentExecutions&&d.recentExecutions.length>0){
-      fe.innerHTML=d.recentExecutions.map(function(ex){
+    if(d.chains){
+      // Cache contracts
+      Object.entries(d.chains).forEach(function(e){
+        _contracts['contract_'+e[0]]=e[1].contract||'waiting'
+      })
+      var cg=document.getElementById('chain-grid')
+      if(cg){
+        cg.innerHTML=Object.entries(d.chains).map(function(e){
+          var n=e[0],c=e[1]
+          var ws=c.ws||'starting',ct=c.contract||'waiting'
+          var st=ct.startsWith('0x')?'live':ct==='deploying'?'dep':ct==='failed'?'fail':'wait'
+          var sl=st==='live'?'LIVE':st==='dep'?'DEPLOYING':st==='fail'?'FAILED':'WAITING'
+          return '<div class="cc"><div class="cc-top"><div class="cc-name">'+n.toUpperCase()+'</div>'+
+            '<div class="cc-badge '+st+'">'+sl+'</div></div>'+
+            '<div class="cc-row"><span class="cc-l">WS</span><span class="cc-v '+(ws==='connected'?'ok':'wait')+'">'+ws+'</span></div>'+
+            '<div class="cc-row"><span class="cc-l">Contract</span><span class="cc-v '+(ct.startsWith('0x')?'ok':ct==='failed'?'no':'wait')+'">'+
+            (ct.startsWith('0x')?ct.slice(0,10)+'...':ct)+'</span></div>'+
+            '<div class="cc-row"><span class="cc-l">Borrowers</span><span class="cc-v">'+(c.borrowers||0)+'</span></div>'+
+            '<div class="cc-row"><span class="cc-l">Balance</span><span class="cc-v '+(parseFloat(c.balance||0)>0?'ok':'')+'">'+
+            parseFloat(c.balance||0).toFixed(6)+'</span></div>'+
+            '<div class="cc-profit">'+fmt(c.profit24||0)+' today</div></div>'
+        }).join('')
+      }
+    }
+    if(d.recentExecutions&&d.recentExecutions.length>0){
+      var fe=document.getElementById('feed')
+      if(fe)fe.innerHTML=d.recentExecutions.map(function(ex){
         var ok=ex.status==='success'
         return '<div class="fi '+(ok?'ok':'fail')+'">'+
-          '<span class="fc">'+((ex.chain||'?').toUpperCase().slice(0,3))+'</span>'+
-          '<span class="ft">'+(ex.protocol||'aave')+'</span>'+
+          '<span class="fc">'+((ex.chain||'').toUpperCase().slice(0,3))+'</span>'+
+          '<span class="ft">'+(ex.protocol||'?').toUpperCase()+'</span>'+
           '<span class="fb">'+(ex.borrower?ex.borrower.slice(0,10)+'...':ex.protocol||'')+'</span>'+
-          '<span class="fp '+(ok&&ex.profit_usdc>0?'':'neg')+'">'+(ok&&ex.profit_usdc>0?'+'+fmt(ex.profit_usdc):ex.status)+'</span>'+
+          '<span class="fp '+(ok&&ex.profit_usdc>0?'pos':'neg')+'">'+(ok&&ex.profit_usdc>0?'+'+fmt(ex.profit_usdc):ex.status)+'</span>'+
           '</div>'
       }).join('')
     }
-    var pg=document.getElementById('prices-grid')
-    if(pg&&d.prices){
-      pg.innerHTML=['ETH','BTC','MATIC','LINK','AVAX'].filter(function(k){return d.prices[k]}).map(function(k){
-        return '<div class="metric-row"><span class="metric-label">'+k+'</span><span class="metric-val">$'+Number(d.prices[k]).toLocaleString()+'</span></div>'
+    if(d.prices){
+      var pg=document.getElementById('prices-grid')
+      if(pg)pg.innerHTML=['ETH','BTC','MATIC','LINK','AVAX','BNB'].filter(function(k){return d.prices[k]}).map(function(k){
+        return '<div class="mr"><span class="ml">'+k+'</span><span class="mv">$'+Number(d.prices[k]).toLocaleString()+'</span></div>'
       }).join('')
     }
     var liq=d.liquidatable||0,risk=d.atRisk||0,total=Math.max(d.borrowers||1,1)
-    var safe=Math.max(0,total-risk)
-    var pctLiq=Math.min((liq/total)*100,100),pctRisk=Math.min(((risk-liq)/total)*100,100)
-    var el=document.getElementById('hf-bar-liq');if(el)el.style.width=Math.max(pctLiq,1)+'%'
-    el=document.getElementById('hf-bar-risk');if(el)el.style.width=Math.max(pctRisk,2)+'%'
+    var l=document.getElementById('hf-liq'),r=document.getElementById('hf-risk')
+    if(l)l.style.width=Math.max((liq/total)*100,1)+'%'
+    if(r)r.style.width=Math.max(((risk-liq)/total)*100,2)+'%'
     var hfd=document.getElementById('hf-dist')
-    if(hfd)hfd.innerHTML='<span style="color:var(--red)">'+liq+' liquidatable</span> · <span style="color:var(--yellow)">'+(risk-liq)+' at risk</span> · <span style="color:var(--green)">'+safe+' healthy</span>'
+    if(hfd)hfd.textContent=liq+' liquidatable · '+(risk-liq)+' at risk · '+(total-risk)+' healthy'
   })
 }
 
 function loadST(){
-  api('/api/overview').then(function(d){
-    if(!d||!d.strategies)return
-    var s=d.strategies
-    // CEX-DEX
-    set('strat-cexdex-profit',fmt(s.cexdex?.total||0))
-    set('strat-cexdex-count', s.cexdex?.count||'0')
-    var cl=s.cexdex?.last
-    if(cl){set('strat-cexdex-last',fmt(cl.profit||0));set('strat-cexdex-chain',(cl.chain||'—').toUpperCase())}
-    // Backrun
-    set('strat-backrun-profit', fmt(s.backrun?.total||0))
-    set('strat-backrun-count',  s.backrun?.count||'0')
-    set('strat-backrun-missed', fmt(s.backrun?.missed||0))
-    var bl=s.backrun?.last
-    if(bl)set('strat-backrun-chain',(bl.chain||'—').toUpperCase())
-    // JIT
-    set('strat-jit-profit',fmt(s.jit?.total||0))
-    set('strat-jit-count', s.jit?.count||'0')
-    // Liquidations
-    set('strat-liq-profit',  fmt(s.liquidations?.total||0))
-    set('strat-liq-borrowers',d.borrowers||0)
-    set('strat-liq-risk',    d.atRisk||0)
-    set('strat-liq-now',     d.liquidatable||0)
-    set('strat-liq-missed',  fmt(s.liquidations?.missed||0))
-    set('nb-liq',d.liquidatable||0)
+  api('/api/strategies').then(function(d){
+    if(!d)return
+    if(d.stats)_stratData=d.stats
+    set('s-total',fmt(d.total||0))
+    set('s-missed',fmt(d.missed||0))
+    var count=Object.values(_stratData).reduce(function(s,v){return s+(v.count||0)},0)
+    set('s-count',count)
+    updateStratCards()
   })
+  // Also trigger card render with current data
+  updateStratCards()
 }
 
 function loadSC(){
-  var cf=document.getElementById('scan-chain-filter'),hf=document.getElementById('scan-hf-filter')
-  var chain=cf?cf.value:'',hfFilter=hf?hf.value:''
+  var cf=document.getElementById('scan-chain'),hf=document.getElementById('scan-hf')
+  var chain=cf?cf.value:'',hfF=hf?hf.value:''
   api('/api/scanner'+(chain?'?chain='+chain:'')).then(function(d){
     if(!d)return
     set('sc-total',d.total||0);set('sc-liq',d.liquidatable||0)
     set('sc-risk',d.atRisk||0);set('sc-safe',d.safe||0)
+    set('nb-liq',d.liquidatable||0)
     var tb=document.getElementById('scanner-body');if(!tb)return
     var rows=d.borrowers||[]
-    if(hfFilter==='danger')rows=rows.filter(function(r){return r.health_factor<1.0})
-    if(hfFilter==='risk')rows=rows.filter(function(r){return r.health_factor<1.2})
-    if(rows.length===0){tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--t3);padding:20px">No positions match</td></tr>';return}
+    if(hfF==='danger')rows=rows.filter(function(r){return r.health_factor<1.0})
+    if(hfF==='risk')rows=rows.filter(function(r){return r.health_factor<1.2})
+    if(!rows.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--t3);padding:16px">No positions match</td></tr>';return}
     tb.innerHTML=rows.map(function(r){
-      var hf=parseFloat(r.health_factor||999)
-      var hfClass=hf<0.85?'hf-0':hf<1.0?'hf-1':hf<1.2?'hf-2':'hf-3'
-      var feePct=hfFee(hf),feeColor=hfFeeColor(hf)
-      return '<tr class="'+(hf<1?'danger':hf<1.2?'warning':'')+'">'+
-        '<td><span class="fc">'+(r.chain||'?').toUpperCase().slice(0,3)+'</span></td>'+
-        '<td style="font-family:var(--mono);font-size:9px">'+fmtAddr(r.address)+'</td>'+
-        '<td><span class="'+hfClass+'">'+hf.toFixed(4)+'</span></td>'+
+      var hfv=parseFloat(r.health_factor||999)
+      var hfc=hfv<0.85?'color:var(--red);font-weight:800':hfv<1?'color:var(--yellow);font-weight:700':'color:var(--t1)'
+      var fee=hfFee(hfv),fcolor=hfFeeColor(hfv)
+      return '<tr><td><span class="fc">'+((r.chain||'').toUpperCase().slice(0,3))+'</span></td>'+
+        '<td style="color:var(--bluel);font-size:8px">'+fmtAddr(r.address)+'</td>'+
+        '<td><span style="'+hfc+'">'+hfv.toFixed(4)+'</span></td>'+
         '<td>$'+Number(r.collateral_usd||0).toFixed(0)+'</td>'+
         '<td>$'+Number(r.debt_usd||0).toFixed(0)+'</td>'+
-        '<td style="font-weight:700;color:'+feeColor+'">'+feePct+'</td>'+
-        '<td><span class="badge '+(hf<1?'bf':hf<1.2?'bp':'bs')+'">'+(hf<1?'LIQUIDATABLE':hf<1.2?'AT RISK':'HEALTHY')+'</span></td>'+
+        '<td style="font-weight:800;color:'+fcolor+'">'+fee+'</td>'+
+        '<td><span class="badge '+(hfv<1?'bf':hfv<1.2?'bp':'bs')+'">'+(hfv<1?'LIQUIDATABLE':hfv<1.2?'AT RISK':'HEALTHY')+'</span></td>'+
         '</tr>'
     }).join('')
   })
 }
 
 function loadEX(){
-  var pf=document.getElementById('ex-proto-filter'),proto=pf?pf.value:''
+  var pf=document.getElementById('ex-proto'),proto=pf?pf.value:''
   api('/api/executions').then(function(d){
     if(!d)return
-    set('e-total',d.stats?.total||0);set('e-wr',d.stats?.winRate||'0%');set('e-profit',fmt(d.stats?.profit||0))
+    set('e-total',d.stats?.total||0);set('e-wr',d.stats?.winRate||'0%')
+    set('e-profit',fmt(d.stats?.profit||0))
     var missed=0;if(d.missed)Object.values(d.missed).forEach(function(v){missed+=parseFloat(v)||0})
     set('e-missed',fmt(missed))
+    set('nb-exec',d.stats?.total||0)
     var tb=document.getElementById('exec-body');if(!tb)return
     var rows=(d.executions||[]).filter(function(e){return !proto||e.protocol===proto})
-    if(!rows.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--t3);padding:20px">No executions yet</td></tr>';return}
+    if(!rows.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--t3);padding:16px">No executions yet — waiting for contract deployment</td></tr>';return}
     tb.innerHTML=rows.map(function(e){
-      var bs=e.status==='success'?'bs':e.status==='failed'?'bf':'bp'
-      var detail=e.borrower?fmtAddr(e.borrower):e.protocol||'—'
-      return '<tr><td><span class="fc">'+((e.chain||'?').toUpperCase().slice(0,3))+'</span></td>'+
-        '<td><span class="badge bbl">'+(e.protocol||'aave')+'</span></td>'+
-        '<td style="font-family:var(--mono);font-size:9px;color:var(--t3)">'+detail+'</td>'+
-        '<td style="color:var(--green)">'+fmt(e.profit_usdc)+'</td>'+
+      var bs=e.status==='success'?'bs':'bf'
+      return '<tr><td><span class="fc">'+((e.chain||'').toUpperCase().slice(0,3))+'</span></td>'+
+        '<td><span class="badge bb">'+(e.protocol||'?').toUpperCase()+'</span></td>'+
+        '<td style="color:var(--t3);font-size:8px">'+(e.borrower?fmtAddr(e.borrower):e.protocol||'—')+'</td>'+
+        '<td style="color:var(--green);font-weight:700">'+fmt(e.profit_usdc||0)+'</td>'+
         '<td><span class="badge '+bs+'">'+e.status+'</span></td>'+
         '<td style="color:var(--t3)">'+(e.created_at?ago(e.created_at):'—')+'</td></tr>'
     }).join('')
@@ -942,22 +1017,30 @@ function loadEX(){
 function loadTR(){
   api('/api/treasury').then(function(d){
     if(!d)return
-    _avail=d.totalRevenue||0;_auto=d.autoWithdraw||false;renderToggle()
-    set('tr-total',fmt(d.totalRevenue));set('tr-avail',fmt(d.totalRevenue));set('wd-avail',(d.totalRevenue||0).toFixed(2))
+    _avail=d.totalRevenue||0;_auto=d.autoWithdraw||false;renderTgl()
+    set('tr-total',fmt(d.totalRevenue));set('tr-avail',fmt(d.totalRevenue))
+    set('wd-avail',(d.totalRevenue||0).toFixed(2))
     var ce=document.getElementById('tr-chains')
     if(ce&&d.byChain){
       var tot=d.totalRevenue||1
       ce.innerHTML=Object.entries(d.byChain).map(function(e){
         var c=e[0],v=e[1],pct=Math.round((v/tot)*100)||0
-        return '<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:3px"><span style="color:var(--t2)">'+c.toUpperCase()+'</span><span style="font-family:var(--mono);color:var(--green)">'+fmt(v)+'</span></div><div style="height:4px;background:var(--b);border-radius:2px"><div style="height:100%;width:'+pct+'%;background:var(--green);border-radius:2px"></div></div></div>'
+        return '<div style="margin-bottom:7px"><div style="display:flex;justify-content:space-between;font-size:9px;margin-bottom:3px">'+
+          '<span style="color:var(--t2)">'+c.toUpperCase()+'</span>'+
+          '<span style="font-family:var(--mono);color:var(--green)">'+fmt(v)+'</span></div>'+
+          '<div style="height:3px;background:var(--b);border-radius:2px"><div style="height:100%;width:'+pct+'%;background:var(--green);border-radius:2px"></div></div></div>'
       }).join('')
     }
     var he=document.getElementById('wd-hist')
     if(he){
-      if(!d.withdrawals||!d.withdrawals.length){he.innerHTML='<div style="color:var(--t3);font-size:10px;padding:10px 0">No withdrawals yet</div>';return}
+      if(!d.withdrawals||!d.withdrawals.length){
+        he.innerHTML='<div style="color:var(--t3);font-size:9px;padding:8px 0">No withdrawals yet</div>';return
+      }
       he.innerHTML=d.withdrawals.slice(0,5).map(function(w){
         var bs=w.status==='completed'?'bs':w.status==='failed'?'bf':'bp'
-        return '<div class="metric-row"><span style="font-family:var(--mono)">'+fmt(w.usdc_amount)+'</span><span style="color:var(--t3)">'+Math.round(w.gmd_amount||0).toLocaleString()+' GMD</span><span class="badge '+bs+'">'+w.status+'</span></div>'
+        return '<div class="mr"><span style="font-family:var(--mono)">'+fmt(w.usdc_amount)+'</span>'+
+          '<span style="color:var(--t3)">'+Math.round(w.gmd_amount||0).toLocaleString()+' GMD</span>'+
+          '<span class="badge '+bs+'">'+w.status+'</span></div>'
       }).join('')
     }
   })
@@ -969,46 +1052,48 @@ function loadWL(){
     if(d.executor){_execAddr=d.executor;set('wl-exec',d.executor);set('sb-exec',fmtAddr(d.executor))}
     var b=d.balances||{}
     var chains=[
-      {k:'polygon',  sym:'POL',  need:0.01,   label:'Polygon — cheapest to start'},
-      {k:'arbitrum', sym:'ETH',  need:0.0001, label:'Arbitrum — funded from first profit'},
-      {k:'ethereum', sym:'ETH',  need:0.003,  label:'Ethereum — funded from profits ($8)'},
-      {k:'avalanche',sym:'AVAX', need:0.002,  label:'Avalanche — funded from profits'}
+      {k:'polygon',  sym:'POL',  need:0.01,   label:'Cheapest to start — deploys in <1s'},
+      {k:'arbitrum', sym:'ETH',  need:0.0001, label:'Funded from first Polygon profit'},
+      {k:'ethereum', sym:'ETH',  need:0.003,  label:'Largest MEV pool — funded from profits'},
+      {k:'avalanche',sym:'AVAX', need:0.002,  label:'Auto-funded from profits'}
     ]
-    var dg=document.getElementById('wallet-detail-grid')
+    var dg=document.getElementById('wallet-detail')
+    if(d.chains)Object.entries(d.chains).forEach(function(e){_contracts['contract_'+e[0]]=e[1].contract})
     if(dg){
       dg.innerHTML=chains.map(function(c){
         var bal=parseFloat(b[c.k])||0
-        var pct=Math.min(bal/c.need,1)
         var ok=bal>=c.need
-        var ct=d.chains&&d.chains[c.k]?d.chains[c.k].contract:'waiting'
+        var pct=Math.min(bal/c.need,1)
+        var ct=_contracts['contract_'+c.k]||'waiting'
         var live=ct&&ct.startsWith('0x')
-        return '<div class="wc '+(live?'live':ok?'funded':'')+'">'+
-          '<div class="wc-chain">'+c.k.toUpperCase()+' <span class="wc-badge '+(live?'live':ok?'deploy':'wait')+'">'+(live?'LIVE':ok?'DEPLOYING':'WAITING')+'</span></div>'+
-          '<div class="wc-bal '+(ok?'has-funds':'')+'">'+bal.toFixed(6)+' '+c.sym+'</div>'+
-          '<div class="wc-needed">Need: '+c.need+' '+c.sym+'</div>'+
-          '<div style="height:4px;background:var(--b);border-radius:2px;margin-top:6px"><div style="height:100%;width:'+Math.round(pct*100)+'%;background:'+(ok?'var(--green)':'var(--yellow)')+';border-radius:2px;transition:.5s"></div></div>'+
-          (live?'<div class="wc-contract">'+ct.slice(0,14)+'...</div>':'')+
-          '<div style="font-size:8px;color:var(--t3);margin-top:4px">'+c.label+'</div>'+
-          '</div>'
+        return '<div class="wc '+(live?'live':ok?'has':'')+'" data-chain="'+c.k+'">'+
+          '<div class="wc-glow '+(live?'green':ok?'blue':'yellow')+'"></div>'+
+          '<div class="wc-chain">'+c.k.toUpperCase()+
+          '<span class="wc-badge '+(live?'live':ok?'dep':'wait')+'">'+(live?'LIVE':ok?'DEPLOYING':'WAITING')+'</span></div>'+
+          '<div class="wc-bal '+(ok||live?'funded':'')+'">'+bal.toFixed(6)+' '+c.sym+'</div>'+
+          '<div class="wc-need">Need: '+c.need+' '+c.sym+'</div>'+
+          '<div class="wc-bar"><div class="wc-bar-fill" style="width:'+Math.round(pct*100)+'%;background:'+(ok?'var(--green)':'var(--yellow)')+'"></div></div>'+
+          (live?'<div class="wc-contract">'+ct.slice(0,18)+'...</div>':'')+
+          '<div style="font-size:7px;color:var(--t3);margin-top:4px">'+c.label+'</div></div>'
       }).join('')
     }
-    var cl=document.getElementById('wl-checklist')
+    var cl=document.getElementById('wl-checks')
     if(cl){
       var checks=[
-        {label:'EXECUTOR_PRIVATE_KEY set',  ok:!!d.executor},
-        {label:'Polygon RPC key (Alchemy)',  ok:d.chains?.polygon?.ws==='connected'},
-        {label:'Arbitrum RPC key',           ok:d.chains?.arbitrum?.ws==='connected'},
-        {label:'Ethereum RPC key',           ok:d.chains?.ethereum?.ws==='connected'},
-        {label:'0.01 POL in wallet',         ok:(parseFloat(b.polygon)||0)>=0.01},
-        {label:'Polygon contract deployed',  ok:!!(d.chains?.polygon?.contract?.startsWith('0x'))},
-        {label:'Arbitrum contract deployed', ok:!!(d.chains?.arbitrum?.contract?.startsWith('0x'))},
-        {label:'MODEM_PAY_WAVE_NUMBER set',  ok:false}
+        {l:'EXECUTOR_PRIVATE_KEY set',  ok:!!d.executor},
+        {l:'Polygon WebSocket connected',ok:d.chains?.polygon?.ws==='connected'},
+        {l:'Arbitrum WebSocket connected',ok:d.chains?.arbitrum?.ws==='connected'},
+        {l:'Ethereum WebSocket connected',ok:d.chains?.ethereum?.ws==='connected'},
+        {l:'0.01 POL in wallet',         ok:(parseFloat(b.polygon)||0)>=0.01},
+        {l:'Polygon contract live',      ok:!!(d.chains?.polygon?.contract?.startsWith('0x'))},
+        {l:'All 33 strategies active',   ok:Object.values(d.chains||{}).some(function(c){return c.contract?.startsWith('0x')})},
+        {l:'MODEM_PAY_WAVE_NUMBER set',  ok:false}
       ]
       cl.innerHTML='<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">'+
         checks.map(function(c){
-          return '<div style="display:flex;align-items:center;gap:8px;font-size:11px;padding:6px 0;border-bottom:1px solid var(--b)">'+
-            '<span style="color:'+(c.ok?'var(--green)':'var(--red)');font-size:14px">'+(c.ok?'✓':'✗')+'</span>'+
-            '<span style="color:'+(c.ok?'var(--t1)':'var(--t2)')+'">'+c.label+'</span></div>'
+          return '<div style="display:flex;align-items:center;gap:7px;font-size:10px;padding:5px 0;border-bottom:1px solid var(--b)">'+
+            '<span style="color:'+(c.ok?'var(--green)':'var(--red)');font-size:13px">'+(c.ok?'✓':'✗')+'</span>'+
+            '<span style="color:'+(c.ok?'var(--t1)':'var(--t2)')+'">'+c.l+'</span></div>'
         }).join('')+'</div>'
     }
   })
@@ -1017,77 +1102,59 @@ function loadWL(){
 function loadSY(){
   api('/api/system').then(function(d){
     if(!d||d.initializing)return
-    set('sys-up',Math.floor((d.uptime||0)/60)+'m');set('sys-mem',d.memory||'0MB')
-    set('sys-db',d.dbReady?'READY':'INIT');set('sys-active',(d.activeChains||[]).length)
+    var up=Math.floor((d.uptime||0)/60)
+    set('sys-up',up>60?Math.floor(up/60)+'h '+( up%60)+'m':up+'m')
+    set('sys-mem',d.memory||'—');set('sys-db',d.dbReady?'READY':'INIT')
+    set('sys-active',(d.activeChains||[]).length)
     set('sb-uptime',Math.floor((d.uptime||0)/60)+'m')
+    var sc=document.getElementById('sb-chains')
+    if(sc&&d.activeChains)sc.textContent=d.activeChains.length+' chains: '+d.activeChains.join(', ')
     var ce=document.getElementById('sys-contracts')
     if(ce&&d.contracts){
       ce.innerHTML=Object.entries(d.contracts).map(function(e){
         var c=e[0],a=e[1],live=a&&a.startsWith('0x')
-        return '<div class="metric-row"><span class="metric-label">'+c.toUpperCase()+'</span>'+
-          '<span class="metric-val" style="color:'+(live?'var(--green)':'var(--t3)')+'">'+
-          (live?a.slice(0,12)+'...':a||'waiting')+'</span></div>'
+        return '<div class="mr"><span class="ml">'+c.toUpperCase()+'</span>'+
+          '<span class="mv" style="color:'+(live?'var(--green)':'var(--t3)')+'">'+
+          (live?a.slice(0,14)+'...':a||'waiting')+'</span></div>'
       }).join('')
     }
     var en=document.getElementById('sys-env')
     if(en&&d.envStatus){
-      en.innerHTML='<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">'+
+      en.innerHTML='<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:5px">'+
         Object.entries(d.envStatus).map(function(e){
-          return '<div style="display:flex;align-items:center;gap:6px;font-size:10px">'+
+          return '<div style="display:flex;align-items:center;gap:6px;font-size:9px">'+
             '<span style="color:'+(e[1]?'var(--green)':'var(--red)')+'">'+( e[1]?'✓':'✗')+'</span>'+
-            '<span style="color:var(--t2)">'+e[0]+'</span></div>'
+            '<span style="color:var(--t2);font-size:8px">'+e[0]+'</span></div>'
         }).join('')+'</div>'
     }
-    var le=document.getElementById('apex-log')
+    var le=document.getElementById('sys-apex')
     if(le&&d.apexLog){
       le.innerHTML=d.apexLog.map(function(l){
-        return '<div style="padding:7px 10px;border-bottom:1px solid var(--b);font-size:10px;font-family:var(--mono);color:var(--t2)">'+
+        return '<div style="padding:6px 9px;border-bottom:1px solid var(--b);font-size:9px;font-family:var(--mono);color:var(--t2)">'+
           '<span style="color:var(--bluel)">['+((l.subsystem||'apex').toUpperCase())+']</span> '+(l.action||'')+'</div>'
-      }).join('')||'<div style="padding:10px;font-size:10px;color:var(--t3)">No decisions yet</div>'
-    }
-    if(d.activeChains){
-      var sc=document.getElementById('sb-chains')
-      if(sc)sc.textContent=d.activeChains.length+' chains: '+d.activeChains.join(', ')
+      }).join('')||'<div style="padding:8px;font-size:9px;color:var(--t3)">No decisions yet</div>'
     }
   })
 }
 
-function loadAP(){
-  api('/api/overview').then(function(d){
-    if(!d)return
-    if(d.apex){
-      set('apex-insight',d.apex.insight||'Scanning...')
-      set('apex-action','Action: '+(d.apex.action||'—'))
-      set('apex-chain','Priority: '+(d.apex.priorityChain||'polygon').toUpperCase())
-    }
-    if(d.chains){
-      var wr=document.getElementById('apex-wr')
-      if(wr){wr.innerHTML=Object.entries(d.chains).map(function(e){
-        var n=e[0],c=e[1],rate=Math.round(parseFloat(c.wr_aave||0.4)*100)
-        return '<div class="metric-row"><span class="metric-label">'+n.toUpperCase()+'</span>'+
-          '<div style="display:flex;align-items:center;gap:8px">'+
-          '<div style="width:60px;height:4px;background:var(--b);border-radius:2px">'+
-          '<div style="width:'+rate+'%;height:100%;background:'+(rate>60?'var(--green)':rate>40?'var(--yellow)':'var(--red)')+';border-radius:2px"></div></div>'+
-          '<span style="font-family:var(--mono);font-size:10px">'+rate+'%</span></div></div>'
-      }).join('')}
-    }
-  })
-  api('/api/system').then(function(d){
-    if(!d)return
-    var le=document.getElementById('apex-log2')
-    if(le&&d.apexLog){le.innerHTML=d.apexLog.map(function(l){
-      return '<div style="padding:7px 10px;border-bottom:1px solid var(--b);font-size:10px;font-family:var(--mono);color:var(--t2)">'+
-        '<span style="color:var(--bluel)">['+((l.subsystem||'apex').toUpperCase())+']</span> '+(l.action||'')+'</div>'
-    }).join('')}
-  })
+function addFeed(stratKey,profit){
+  var fe=document.getElementById('feed');if(!fe)return
+  var s=STRATEGIES[stratKey]||{name:stratKey,color:'var(--bluel)'}
+  var el=document.createElement('div');el.className='fi ok'
+  el.innerHTML='<span class="fc">'+stratKey.toUpperCase()+'</span>'+
+    '<span class="ft">'+s.name.slice(0,20)+'</span>'+
+    '<span class="fp pos">+'+fmt(profit)+'</span>'
+  fe.insertBefore(el,fe.firstChild)
+  if(fe.children.length>40)fe.removeChild(fe.lastChild)
 }
 
 function pct(p){var e=document.getElementById('wd-amt');if(e)e.value=(_avail*p/100).toFixed(2)}
 function toggleAuto(){
-  fetch('/api/toggle-auto-withdraw',{method:'POST'}).then(function(r){return r.json()}).then(function(d){_auto=d.autoWithdraw;renderToggle()})
+  fetch('/api/toggle-auto-withdraw',{method:'POST'}).then(function(r){return r.json()}).then(function(d){_auto=d.autoWithdraw;renderTgl()})
 }
 function doWithdraw(){
-  var amt=parseFloat(document.getElementById('wd-amt').value),btn=document.getElementById('wd-btn')
+  var amt=parseFloat(document.getElementById('wd-amt').value)
+  var btn=document.getElementById('wd-btn')
   if(!amt||amt<=0){showMsg('Enter valid amount','er');return}
   btn.disabled=true;btn.textContent='SENDING...'
   document.getElementById('wd-msg').className='msg'
@@ -1102,25 +1169,33 @@ function doWithdraw(){
 }
 function showMsg(txt,cls){var e=document.getElementById('wd-msg');if(e){e.textContent=txt;e.className='msg '+cls}}
 
+// Auto refresh
 setInterval(function(){
   var a=document.querySelector('.page.on'),id=a?a.id.slice(2):'overview'
   load(id)
 },15000)
+
+// Revenue + balance refresh every 5s
 setInterval(function(){
   api('/api/overview').then(function(d){
-    if(d&&!d.initializing){
-      set('t-total',fmt(d.totalRevenue));set('t-today',fmt(d.todayRevenue))
-      set('sb-total',fmt(d.totalRevenue));set('sb-today',fmt(d.todayRevenue))
-      if(d.balances){
-        updBalance('polygon',  d.balances.polygon,  'POL',  0.01)
-        updBalance('arbitrum', d.balances.arbitrum, 'ETH',  0.0001)
-        updBalance('ethereum', d.balances.ethereum, 'ETH',  0.003)
-        updBalance('avalanche',d.balances.avalanche,'AVAX', 0.002)
-      }
+    if(!d||d.initializing)return
+    set('t-total',fmt(d.totalRevenue));set('t-today',fmt(d.todayRevenue))
+    set('sb-total',fmt(d.totalRevenue));set('sb-today',fmt(d.todayRevenue))
+    if(d.balances){
+      updBal('polygon',  d.balances.polygon  ||'0','POL', 0.01)
+      updBal('arbitrum', d.balances.arbitrum ||'0','ETH', 0.0001)
+      updBal('ethereum', d.balances.ethereum ||'0','ETH', 0.003)
+      updBal('avalanche',d.balances.avalanche||'0','AVAX',0.002)
+    }
+    if(d.strategies){
+      set('t-strat',fmt(d.strategies.total))
+      set('t-missed',fmt(d.strategies.missed))
     }
   })
 },5000)
+
 loadOV()
+updateStratCards()
 </script>
 </body>
 </html>
