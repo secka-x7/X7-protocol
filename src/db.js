@@ -1,136 +1,126 @@
-// X7 PROTOCOL — DATABASE
-// sql.js: pure JS SQLite, no native deps, no Python needed
-// _ready gate: all functions return empty until DB is initialized
-// Single source of truth: zero duplicate exports
+// X7-SV · db.js — SQLite + Postgres dual-write · Railway volume persistence
+// Data survives all redeploys via /data volume + external Postgres
 
-import { createRequire } from 'module'
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
-import { join, dirname } from 'path'
-import { fileURLToPath } from 'url'
+import Database from 'better-sqlite3'
+import { existsSync, mkdirSync } from 'fs'
+import pg from 'pg'
 
-const require    = createRequire(import.meta.url)
-const __dir      = dirname(fileURLToPath(import.meta.url))
-const DATA_DIR   = existsSync('/data') ? '/data' : join(__dir, '../data')
-const DB_PATH    = join(DATA_DIR, 'x7.db')
-const SCHEMA     = join(__dir, '../database/schema.sql')
-
+const DATA_DIR = process.env.RAILWAY_VOLUME_MOUNT_PATH || '/data'
 if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true })
 
-let db       = null
-let _ready   = false
-
-function log(m) { console.log(`[DB] ${new Date().toISOString()} ${m}`) }
+let db, pgPool
 
 export async function initDB() {
-  const initSql = require('sql.js')
-  const SQL     = await initSql()
-  db            = existsSync(DB_PATH)
-    ? new SQL.Database(readFileSync(DB_PATH))
-    : new SQL.Database()
-  db.run(readFileSync(SCHEMA, 'utf8'))
-  _save()
-  setInterval(_save, 15000)
-  _ready = true
-  log(`ready → ${DB_PATH}`)
+  // SQLite on Railway persistent volume
+  db = new Database(`${DATA_DIR}/x7sv.db`)
+  db.pragma('journal_mode = WAL')
+  db.pragma('synchronous = NORMAL')
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS executions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tx_hash TEXT, chain TEXT, protocol TEXT,
+      profit_usdc REAL DEFAULT 0, status TEXT,
+      created_at INTEGER DEFAULT (unixepoch())
+    );
+    CREATE TABLE IF NOT EXISTS config (
+      key TEXT PRIMARY KEY, value TEXT,
+      updated_at INTEGER DEFAULT (unixepoch())
+    );
+    CREATE TABLE IF NOT EXISTS withdrawals (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      usdc_amount REAL, gmd_amount REAL,
+      tx_id TEXT, status TEXT,
+      created_at INTEGER DEFAULT (unixepoch())
+    );
+    CREATE INDEX IF NOT EXISTS idx_exec_chain ON executions(chain, created_at);
+    CREATE INDEX IF NOT EXISTS idx_exec_proto ON executions(protocol, status);
+  `)
+
+  // Postgres (Railway plugin) — backup/recovery layer
+  if (process.env.DATABASE_URL) {
+    try {
+      pgPool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 3 })
+      await pgPool.query(`
+        CREATE TABLE IF NOT EXISTS executions (
+          id SERIAL PRIMARY KEY, tx_hash TEXT, chain TEXT, protocol TEXT,
+          profit_usdc REAL DEFAULT 0, status TEXT,
+          created_at BIGINT DEFAULT extract(epoch from now())
+        );
+        CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value TEXT);
+        CREATE TABLE IF NOT EXISTS withdrawals (
+          id SERIAL PRIMARY KEY, usdc_amount REAL, gmd_amount REAL,
+          tx_id TEXT, status TEXT,
+          created_at BIGINT DEFAULT extract(epoch from now())
+        );
+      `)
+      // Restore SQLite from Postgres if SQLite was fresh
+      const count = db.prepare('SELECT COUNT(*) as n FROM executions').get()
+      if (count.n === 0) {
+        const rows = await pgPool.query('SELECT * FROM config')
+        const ins = db.prepare('INSERT OR REPLACE INTO config(key,value) VALUES(?,?)')
+        rows.rows.forEach(r => ins.run(r.key, r.value))
+      }
+      console.log('[DB] Postgres connected — dual-write active')
+    } catch (e) { console.log('[DB] Postgres optional:', e.message.slice(0, 60)) }
+  }
+
+  console.log('[DB] SQLite ready at ' + DATA_DIR + '/x7sv.db')
 }
 
-function _save() {
-  if (!db) return
-  try { writeFileSync(DB_PATH, Buffer.from(db.export())) } catch {}
+// Batched writes — flush every 100ms, not per-operation
+const _writeQueue = []
+let _flushTimer = null
+
+function queueWrite(fn) {
+  _writeQueue.push(fn)
+  if (!_flushTimer) _flushTimer = setTimeout(flush, 100)
 }
 
-function _q(sql, p = []) {
-  if (!_ready) return []
+function flush() {
+  _flushTimer = null
+  if (!_writeQueue.length) return
+  const batch = db.transaction(() => { _writeQueue.splice(0).forEach(fn => fn()) })
+  try { batch() } catch (e) { console.error('[DB] flush:', e.message) }
+}
+
+export function setConfig(key, value) {
+  queueWrite(() => db.prepare('INSERT OR REPLACE INTO config(key,value,updated_at) VALUES(?,?,unixepoch())').run(key, String(value)))
+  if (pgPool) pgPool.query('INSERT INTO config(key,value) VALUES($1,$2) ON CONFLICT(key) DO UPDATE SET value=$2', [key, String(value)]).catch(() => {})
+}
+
+export function getConfig(key) {
+  try { return db.prepare('SELECT value FROM config WHERE key=?').get(key)?.value ?? null }
+  catch { return null }
+}
+
+export function recordExecution(data) {
+  queueWrite(() => db.prepare('INSERT INTO executions(tx_hash,chain,protocol,profit_usdc,status) VALUES(?,?,?,?,?)').run(data.txHash || '', data.chain || '', data.protocol || '', data.profitUsdc || 0, data.status || 'success'))
+  if (pgPool) pgPool.query('INSERT INTO executions(tx_hash,chain,protocol,profit_usdc,status) VALUES($1,$2,$3,$4,$5)', [data.txHash || '', data.chain || '', data.protocol || '', data.profitUsdc || 0, data.status || 'success']).catch(() => {})
+}
+
+export function recordWithdrawal(data) {
+  queueWrite(() => db.prepare('INSERT INTO withdrawals(usdc_amount,gmd_amount,tx_id,status) VALUES(?,?,?,?)').run(data.usdcAmount, data.gmdAmount, data.txId || '', data.status || 'completed'))
+  if (pgPool) pgPool.query('INSERT INTO withdrawals(usdc_amount,gmd_amount,tx_id,status) VALUES($1,$2,$3,$4)', [data.usdcAmount, data.gmdAmount, data.txId || '', data.status || 'completed']).catch(() => {})
+}
+
+export function getExecutions(limit = 50, protocol = '') {
+  const sql = protocol
+    ? 'SELECT * FROM executions WHERE protocol=? ORDER BY created_at DESC LIMIT ?'
+    : 'SELECT * FROM executions ORDER BY created_at DESC LIMIT ?'
+  try { return db.prepare(sql).all(...(protocol ? [protocol, limit] : [limit])) }
+  catch { return [] }
+}
+
+export function getStats() {
   try {
-    const s = db.prepare(sql)
-    s.bind(p)
-    const rows = []
-    while (s.step()) rows.push(s.getAsObject())
-    s.free()
-    return rows
-  } catch (e) { log(`query error: ${e.message}`); return [] }
+    const r = db.prepare(`
+      SELECT COUNT(*) total,
+             SUM(CASE WHEN status='success' THEN 1 ELSE 0 END) wins,
+             SUM(profit_usdc) profit,
+             SUM(CASE WHEN created_at > unixepoch()-86400 THEN profit_usdc ELSE 0 END) today
+      FROM executions
+    `).get()
+    return { total: r.total || 0, winRate: r.total ? Math.round(r.wins / r.total * 100) + '%' : '0%', profit: r.profit || 0, today: r.today || 0 }
+  } catch { return { total: 0, winRate: '0%', profit: 0, today: 0 } }
 }
-
-function _r(sql, p = []) {
-  if (!_ready) return
-  try { db.run(sql, p) } catch (e) { log(`run error: ${e.message}`) }
-}
-
-export function getConfig(k) {
-  const r = _q('SELECT value FROM system_config WHERE key=?', [k])
-  return r[0]?.value ?? null
-}
-
-export function setConfig(k, v) {
-  _r(`INSERT OR REPLACE INTO system_config (key,value,updated_at)
-      VALUES (?,?,strftime('%s','now'))`, [k, String(v)])
-}
-
-export function recordExecution(d) {
-  _r(`INSERT INTO executions
-      (tx_hash,chain,protocol,borrower,collateral_asset,debt_asset,
-       profit_usdc,gas_usdc,status,error_msg)
-      VALUES (?,?,?,?,?,?,?,?,?,?)`,
-    [d.txHash||null, d.chain, d.protocol||'aave', d.borrower||null,
-     d.collateralAsset||null, d.debtAsset||null,
-     d.profitUsdc||0, d.gasUsdc||0, d.status||'pending', d.errorMsg||null])
-  _save()
-}
-
-// THE EXPORT THAT CRASHED THE PREVIOUS SYSTEM
-export function recordRevenue(chain, profitUsdc, protocol='aave') {
-  if (!profitUsdc || profitUsdc <= 0) return
-  const burned = Number(getConfig('x7t_burned')||0) + (profitUsdc * 0.01)
-  setConfig('x7t_burned', burned.toFixed(6))
-  console.log(`[PROFIT] +$${Number(profitUsdc).toFixed(2)} on ${chain}/${protocol}`)
-}
-
-export function getTotalRevenue() {
-  return Number(_q(`SELECT SUM(profit_usdc) as t FROM executions WHERE status='success'`)[0]?.t)||0
-}
-
-export function getTodayRevenue() {
-  return Number(_q(`SELECT SUM(profit_usdc) as t FROM executions
-    WHERE status='success' AND created_at>=strftime('%s','now','start of day')`)[0]?.t)||0
-}
-
-export function getRecentExecutions(n=20) {
-  return _q(`SELECT * FROM executions ORDER BY created_at DESC LIMIT ?`, [n])
-}
-
-export function upsertBorrower(address, chain, protocol, hf, coll=0, debt=0) {
-  _r(`INSERT OR REPLACE INTO borrowers
-      (address,chain,protocol,health_factor,collateral_usd,debt_usd,last_checked)
-      VALUES (?,?,?,?,?,?,strftime('%s','now'))`,
-    [address, chain, protocol, hf, coll, debt])
-}
-
-export function getAtRisk(chain, protocol, maxHF=1.05) {
-  return _q(`SELECT * FROM borrowers WHERE chain=? AND protocol=?
-     AND health_factor<? AND health_factor>0
-     ORDER BY health_factor ASC LIMIT 500`, [chain, protocol, maxHF])
-}
-
-export function recordWithdrawal(k, usdc, gmd) {
-  _r(`INSERT OR IGNORE INTO withdrawals (idempotency_key,usdc_amount,gmd_amount)
-      VALUES (?,?,?)`, [k, usdc, gmd])
-  _save()
-}
-
-export function updateWithdrawal(k, tid, status, err=null) {
-  _r(`UPDATE withdrawals SET transfer_id=?,status=?,error=? WHERE idempotency_key=?`,
-    [tid, status, err, k])
-  _save()
-}
-
-export function getWithdrawals(n=20) {
-  return _q(`SELECT * FROM withdrawals ORDER BY created_at DESC LIMIT ?`, [n])
-}
-
-export function logApex(sub, action, result) {
-  _r(`INSERT INTO apex_log (subsystem,action,result) VALUES (?,?,?)`,
-    [sub, action, JSON.stringify(result)])
-}
-
-export function query(sql, p=[]) { return _q(sql, p) }
-export function isReady() { return _ready }
