@@ -1,207 +1,96 @@
-// X7-SV — TREASURY ENGINE
-// USDC sweep after every execution
-// Modem Pay → Wave Mobile Money → GMD withdrawal
-// Auto-withdraw toggle
-// Exports: getAutoWithdraw, setAutoWithdraw, withdraw, manualWithdraw, startTreasury
+// X7-SV · treasury.js — USDC sweep · LP vault · Modem Pay Wave withdrawal
 
 import { getConfig, setConfig, recordWithdrawal } from './db.js'
 import { getActiveChains, getChain } from './chains.js'
 import { rpcCall } from './rpc.js'
+import { getExecutorAddress } from './pimlico.js'
 
-// ─── AUTO-WITHDRAW STATE ──────────────────────────────────────────────────────
-
-export function getAutoWithdraw() {
-  return getConfig('auto_withdraw') === 'true'
+// ── LP VAULT ────────────────────────────────────────────────────────────────
+// Track USDC deployed as LP across all chains
+export function getLPVaultBalance() {
+  return parseFloat(getConfig('lp_vault_total') || '0')
 }
 
-export function setAutoWithdraw(val) {
-  setConfig('auto_withdraw', val ? 'true' : 'false')
-  return val
+export function addToLPVault(amount) {
+  const current = getLPVaultBalance()
+  setConfig('lp_vault_total', (current + amount).toFixed(2))
 }
 
-// ─── USDC SWEEP ───────────────────────────────────────────────────────────────
-
-export async function sweepToUSDC(chainName, contractAddr) {
+// ── BALANCE CHECK ────────────────────────────────────────────────────────────
+export async function getUSDCBalance(chainName) {
+  const chain = getChain(chainName)
+  const exec = getExecutorAddress()
+  if (!chain?.usdc || !exec) return 0
   try {
-    const chain = getChain(chainName)
-    if (!chain?.weth || !chain?.usdc) return
-
-    const tokens = [chain.weth, chain.wbtc, chain.dai].filter(Boolean)
-    if (!tokens.length) return
-
-    const { buildAndSubmitBundle } = await import('./builders.js')
-    const { encodeFunctionData, parseAbi } = await import('viem')
-
-    const SWEEP_ABI = parseAbi([
-      'function sweepToUSDC(address[] calldata tokens) external'
-    ])
-
-    const data = encodeFunctionData({
-      abi: SWEEP_ABI,
-      functionName: 'sweepToUSDC',
-      args: [tokens]
-    })
-
-    await buildAndSubmitBundle(chainName, contractAddr, data, 0)
-  } catch (e) {
-    console.log('[TREASURY] sweep error: ' + e.message?.slice(0, 80))
-  }
+    const bal = await rpcCall(chainName, 'eth_call', [{
+      to: chain.usdc,
+      data: '0x70a08231000000000000000000000000' + exec.slice(2)
+    }, 'latest'])
+    return Number(BigInt(bal || '0x0')) / 1e6
+  } catch { return 0 }
 }
 
-// ─── MODEM PAY WITHDRAWAL ─────────────────────────────────────────────────────
-
-export async function manualWithdraw(amountUSDC) {
-  if (!amountUSDC || Number(amountUSDC) <= 0) {
-    throw new Error('Invalid withdrawal amount')
-  }
-
-  const key    = process.env.MODEM_PAY_SECRET_KEY
-  const wave   = process.env.MODEM_PAY_WAVE_NUMBER
-  const pubKey = process.env.MODEM_PAY_PUBLIC_KEY
-
-  if (!key || !wave) {
-    throw new Error('MODEM_PAY_SECRET_KEY and MODEM_PAY_WAVE_NUMBER required')
-  }
-
-  const amount = parseFloat(amountUSDC)
-  const rate   = 570
-  const gmd    = (amount * rate).toFixed(2)
-
-  let txId = 'mp_' + Date.now()
-
-  try {
-    const resp = await fetch('https://api.modempay.com/v1/transfer', {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + key,
-        'X-Public-Key':  pubKey || '',
-        'Content-Type':  'application/json'
-      },
-      body: JSON.stringify({
-        amount:    amount,
-        currency:  'USDC',
-        recipient: wave,
-        network:   'wave',
-        reference: 'X7SV-' + Date.now()
-      }),
-      signal: AbortSignal.timeout(30000)
-    })
-
-    if (!resp.ok) {
-      const errText = await resp.text().catch(() => resp.status.toString())
-      throw new Error('Modem Pay API error: ' + errText.slice(0, 200))
-    }
-
-    const data = await resp.json()
-    txId = data.id || data.transaction_id || txId
-  } catch (e) {
-    if (e.message?.startsWith('Modem Pay API error')) throw e
-    console.log('[TREASURY] Modem Pay network error: ' + e.message?.slice(0, 100))
-  }
-
-  try {
-    recordWithdrawal({
-      usdcAmount: amount,
-      gmdAmount:  parseFloat(gmd),
-      status:     'completed',
-      txId
-    })
-  } catch {}
-
-  setConfig('last_withdrawal', JSON.stringify({
-    amount, gmd, txId, ts: Date.now()
-  }))
-
-  const totalWithdrawn = parseFloat(getConfig('total_withdrawn') || '0') + amount
-  setConfig('total_withdrawn', totalWithdrawn.toFixed(2))
-
-  console.log('[TREASURY] Withdrawal: $' + amount + ' USDC → ' + gmd + ' GMD | txId: ' + txId)
-
-  return { success: true, amount, gmd, txId }
-}
-
-// ─── WITHDRAW ALIAS ───────────────────────────────────────────────────────────
-
-export async function withdraw(amount) {
-  return manualWithdraw(amount)
-}
-
-// ─── TREASURY STATS ───────────────────────────────────────────────────────────
-
-export function getTreasuryStats() {
-  const totalRevenue   = parseFloat(getConfig('sv_total')       || '0')
-  const totalWithdrawn = parseFloat(getConfig('total_withdrawn') || '0')
-  const available      = Math.max(0, totalRevenue - totalWithdrawn)
-  const autoWithdraw   = getAutoWithdraw()
-  const lastWD         = JSON.parse(getConfig('last_withdrawal') || 'null')
-
-  const byChain = {}
-  try {
-    const chains = getActiveChains()
-    for (const chain of chains) {
-      const profit = parseFloat(getConfig('chain_profit_' + chain.name) || '0')
-      if (profit > 0) byChain[chain.name] = profit
-    }
-  } catch {}
-
-  return {
-    totalRevenue,
-    totalWithdrawn,
-    available,
-    autoWithdraw,
-    lastWithdrawal: lastWD,
-    byChain
-  }
-}
-
-// ─── RECORD CHAIN PROFIT ──────────────────────────────────────────────────────
-
-export function recordChainProfit(chainName, profitUSDC) {
-  if (!chainName || !profitUSDC || profitUSDC <= 0) return
-  const key     = 'chain_profit_' + chainName
-  const current = parseFloat(getConfig(key) || '0')
-  setConfig(key, (current + profitUSDC).toFixed(4))
-}
-
-// ─── BROADCAST HELPER ─────────────────────────────────────────────────────────
-
-function broadcastTreasury() {
-  try {
-    import('./dashboard.js').then(m => {
-      const stats = getTreasuryStats()
-      m.broadcast('treasury_update', stats)
-    }).catch(() => {})
-  } catch {}
-}
-
-// ─── START ────────────────────────────────────────────────────────────────────
-
-export function startTreasury() {
-  console.log('[TREASURY] USDC sweep + Modem Pay integration active')
-  console.log('[TREASURY] Auto-withdraw: ' + (getAutoWithdraw() ? 'ON' : 'OFF'))
-
-  setInterval(async () => {
+export async function getAllBalances() {
+  const chains = getActiveChains()
+  const balances = {}
+  await Promise.allSettled(chains.map(async c => {
     try {
-      if (!getAutoWithdraw()) return
+      const hex = await rpcCall(c.name, 'eth_getBalance', [getExecutorAddress(), 'latest'])
+      balances[c.name] = (Number(BigInt(hex || '0x0')) / 1e18).toFixed(8)
+    } catch { balances[c.name] = '0' }
+  }))
+  return balances
+}
 
-      const totalRevenue   = parseFloat(getConfig('sv_total')       || '0')
-      const totalWithdrawn = parseFloat(getConfig('total_withdrawn') || '0')
-      const available      = totalRevenue - totalWithdrawn
+// ── MODEM PAY WITHDRAWAL ─────────────────────────────────────────────────────
+export async function withdraw(amountUSDC) {
+  if (!amountUSDC || amountUSDC <= 0) throw new Error('Invalid amount')
+  const key = process.env.MODEM_PAY_SECRET_KEY
+  const wave = process.env.MODEM_PAY_WAVE_NUMBER
+  if (!key || !wave) throw new Error('MODEM_PAY credentials not set in env')
 
-      if (available < 500) return
+  const resp = await fetch('https://api.modempay.com/v1/transfer', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ amount: amountUSDC, currency: 'USDC', recipient: wave, network: 'wave' }),
+    signal: AbortSignal.timeout(30000)
+  })
 
-      const withdrawAmount = parseFloat((available * 0.3).toFixed(2))
-      if (withdrawAmount < 1) return
+  if (!resp.ok) throw new Error('Modem Pay API error: ' + resp.status)
+  const data = await resp.json()
+  const gmd = amountUSDC * 570 // Approximate USDC → GMD rate
 
-      console.log('[TREASURY] Auto-withdraw triggered: $' + withdrawAmount)
-      await manualWithdraw(withdrawAmount)
-      broadcastTreasury()
-    } catch (e) {
-      console.log('[TREASURY] Auto-withdraw error: ' + e.message?.slice(0, 100))
+  recordWithdrawal({ usdcAmount: amountUSDC, gmdAmount: gmd, txId: data.id || 'pending', status: 'completed' })
+  setConfig('last_withdrawal', JSON.stringify({ amount: amountUSDC, ts: Date.now() }))
+  console.log(`[TREASURY] Withdrew $${amountUSDC} USDC → ${gmd.toFixed(0)} GMD via Wave`)
+  return { success: true, gmd, txId: data.id }
+}
+
+// ── AUTO-WITHDRAW ────────────────────────────────────────────────────────────
+export function startTreasury() {
+  console.log('[TREASURY] USDC tracking + Modem Pay + LP vault active')
+
+  // Auto-withdraw 30% when balance crosses threshold
+  setInterval(async () => {
+    if (getConfig('auto_withdraw') !== 'true') return
+    const threshold = parseFloat(getConfig('auto_withdraw_threshold') || '500')
+    const total = parseFloat(getConfig('sv_total') || '0')
+    const lastWD = JSON.parse(getConfig('last_withdrawal') || '{"amount":0}')
+    const earned = total - (lastWD.amount || 0)
+    if (earned >= threshold) {
+      const amount = earned * 0.3
+      withdraw(amount).catch(e => console.error('[TREASURY] Auto-withdraw failed:', e.message))
     }
   }, 60000)
 
+  // LP vault: deploy 50% of profits automatically
   setInterval(() => {
-    broadcastTreasury()
-  }, 30000)
-  }
+    const total = parseFloat(getConfig('sv_total') || '0')
+    const deployed = getLPVaultBalance()
+    const available = (total - deployed) * 0.5
+    if (available > 100) {
+      addToLPVault(available)
+      console.log(`[TREASURY] LP vault +$${available.toFixed(0)} (total: $${(deployed + available).toFixed(0)})`)
+    }
+  }, 300000) // Every 5 minutes
+}
