@@ -1,19 +1,21 @@
 {
-  "name": "x7-protocol",
-  "version": "1.0.0",
+  "name": "x7-sv",
+  "version": "3.0.0",
   "type": "module",
   "main": "src/index.js",
-  "scripts": { "start": "node src/index.js" },
-  "engines": { "node": ">=20.0.0" },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
   "dependencies": {
-    "viem": "^2.21.0",
-    "permissionless": "^0.2.0",
-    "sql.js": "^1.10.3",
-    "solc": "^0.8.26",
-    "@anthropic-ai/sdk": "^0.27.0",
-    "express": "^4.19.0",
-    "ws": "^8.18.0",
-    "uuid": "^10.0.0",
-    "modem-pay": "^1.0.0"
+    "viem": "^2.53.1",
+    "ws": "^8.21.0",
+    "better-sqlite3": "^12.11.1",
+    "pg": "^8.22.0",
+    "solc": "^0.8.35",
+    "express": "^4.21.2"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   }
 }
