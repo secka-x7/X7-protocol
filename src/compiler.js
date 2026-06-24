@@ -1,4 +1,5 @@
-// X7-SV · compiler.js — compile X7.sol on boot, cache bytecode
+// X7-SV · compiler.js — compile X7.sol on boot using solc (pure JS)
+
 import { readFileSync, existsSync } from 'fs'
 import { createRequire } from 'module'
 import { join, dirname } from 'path'
@@ -12,15 +13,15 @@ let _artifact = null
 export async function compile() {
   if (_artifact) return _artifact
 
-  const solcPath = join(__dir, '../contracts/X7.sol')
-  if (!existsSync(solcPath)) {
-    console.error('[COMPILER] X7.sol not found at', solcPath)
+  const solPath = join(__dir, '../contracts/X7.sol')
+  if (!existsSync(solPath)) {
+    console.error('[COMPILER] X7.sol not found at', solPath)
     return null
   }
 
   try {
-    const solc = require('solc')
-    const source = readFileSync(solcPath, 'utf8')
+    const solc   = require('solc')
+    const source = readFileSync(solPath, 'utf8')
 
     const input = {
       language: 'Solidity',
@@ -33,18 +34,19 @@ export async function compile() {
 
     const output = JSON.parse(solc.compile(JSON.stringify(input)))
 
-    if (output.errors?.some(e => e.severity === 'error')) {
-      output.errors.filter(e => e.severity === 'error').forEach(e => console.error('[COMPILER]', e.message))
+    const errors = (output.errors || []).filter(e => e.severity === 'error')
+    if (errors.length) {
+      errors.forEach(e => console.error('[COMPILER]', e.formattedMessage?.slice(0, 120)))
       return null
     }
 
     const contract = output.contracts['X7.sol']['X7']
     _artifact = {
-      abi: contract.abi,
+      abi:      contract.abi,
       bytecode: '0x' + contract.evm.bytecode.object
     }
 
-    console.log('[COMPILER] X7.sol compiled — bytecode:', _artifact.bytecode.length / 2, 'bytes')
+    console.log('[COMPILER] X7.sol compiled —', Math.round(_artifact.bytecode.length / 2), 'bytes')
     return _artifact
   } catch (e) {
     console.error('[COMPILER] Failed:', e.message)
@@ -52,4 +54,4 @@ export async function compile() {
   }
 }
 
-export function getArtifact() { return _artifact }
+export const getArtifact = () => _artifact
