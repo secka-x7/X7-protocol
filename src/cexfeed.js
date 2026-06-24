@@ -20,16 +20,13 @@ async function onPriceUpdate(symbol, price) {
 
   emit('cex_price', { symbol, price })
 
-  // Compare vs DEX price — trigger arbitrage if gap > threshold
   const chains = getActiveChains().filter(c => c.tier === 1)
   for (const chain of chains) {
     const dexPrice = parseFloat(getConfig(`dex_price_${chain.name}`)||'0')
     if (!dexPrice) continue
     const gap = Math.abs(price - dexPrice) / dexPrice * 100
     if (gap >= 0.03) {
-      // P6: propeller stat-arb trigger
       p6StatArb(chain.name, price, dexPrice).catch(() => {})
-      // S3: revenue stream CEX-DEX arb
       processCEXDEXGap(chain.name, price, dexPrice, symbol).catch(() => {})
     }
   }
@@ -39,7 +36,7 @@ function connectBinance() {
   function connect() {
     try {
       const ws = new WebSocket('wss://stream.binance.com:9443/ws/ethusdt@trade')
-      ws.on('open', () => console.log('[CEX] Binance connected'))
+      ws.on('open',    () => console.log('[CEX] Binance connected'))
       ws.on('message', raw => {
         try {
           const d = JSON.parse(raw.toString())
