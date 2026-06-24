@@ -7,15 +7,13 @@ import { executeBundle } from './builders.js'
 import { getContractAddr } from './pimlico.js'
 import { getActiveChains, getChain, getTierChains } from './chains.js'
 import { processPropellers, p2Cascade, p9MultiChain } from './propellers.js'
-import { depositToLPVault } from './revenue.js'
 import { onMegaSwapDetected } from './bootstrap.js'
 import { emit } from './events.js'
 
-const SWAP_TOPIC  = '0xc42079f94a6350d7e6235f29174924f928cc2ac818eb64fed8004e115fbcca67'
-const ARB_ABI     = parseAbi(['function dexArb(address,address,uint256,uint24,uint24,uint256) external'])
-const MIN_SWAP    = 100_000_000 // $100M minimum
+const SWAP_TOPIC = '0xc42079f94a6350d7e6235f29174924f928cc2ac818eb64fed8004e115fbcca67'
+const ARB_ABI    = parseAbi(['function dexArb(address,address,uint256,uint24,uint24,uint256) external'])
+const MIN_SWAP   = 100_000_000
 
-// ── SV TRACKING ──────────────────────────────────────────────────────────────
 const _sv = {}
 ;['sv1','sv2','sv3','sv4','sv5','sv6','sv7','sv8','sv9','sv10'].forEach(k => {
   _sv[k] = { total:0, count:0, missed:0 }
@@ -30,13 +28,11 @@ export const getSVStats = () => ({
   missed: Object.values(_sv).reduce((s,v) => s+v.missed, 0)
 })
 
-// ── SHARED EXECUTION (all 10 SVs use this) ───────────────────────────────────
 async function execute(chainName, svKey, calldata, profitEst) {
   const addr = getContractAddr(chainName)
   if (!addr) {
     if (_sv[svKey]) _sv[svKey].missed += profitEst
-    const totalMissed = Object.values(_sv).reduce((s,v) => s+v.missed, 0)
-    setConfig('sv_missed_total', totalMissed.toFixed(2))
+    setConfig('sv_missed_total', Object.values(_sv).reduce((s,v) => s+v.missed, 0).toFixed(2))
     emit('missed_rev', { chain:chainName, sv:svKey, amount:profitEst })
     return null
   }
@@ -60,10 +56,12 @@ async function execute(chainName, svKey, calldata, profitEst) {
     emit('sv_update', { key:svKey, profit:profitEst, sv:_sv })
     console.log(`[${svKey.toUpperCase()}] ${chainName} +$${profitEst.toFixed(0)} tx=${String(txHash).slice(0,12)}`)
 
-    // S2: deposit to LP vault after every execution
-    depositToLPVault(profitEst)
+    // S2: deposit to LP vault — dynamic import avoids circular export
+    try {
+      const rev = await import('./revenue.js')
+      rev.depositToLPVault(profitEst)
+    } catch {}
 
-    // Batch sweep (every 10 executions or >$1K profit)
     _sweepCount[chainName] = (_sweepCount[chainName]||0) + 1
     if (_sweepCount[chainName] >= 10 || profitEst > 1000) {
       _sweepCount[chainName] = 0
@@ -89,7 +87,6 @@ async function sweepProfit(chainName, addr) {
   await executeBundle(chainName, addr, data, 0).catch(() => {})
 }
 
-// ── SWAP DECODER ─────────────────────────────────────────────────────────────
 function decodeAmounts(data) {
   if (!data || data.length < 130) return null
   const hex  = data.startsWith('0x') ? data.slice(2) : data
@@ -113,7 +110,6 @@ function estimateUSD(abs0, abs1) {
   return cands.length ? Math.max(...cands) : 0
 }
 
-// ── MEGA-SWAP HANDLER ─────────────────────────────────────────────────────────
 async function onMegaSwap(chainName, log, swapUSD) {
   const chain = getChain(chainName)
   if (!chain?.weth || !chain?.usdc) return
@@ -121,14 +117,10 @@ async function onMegaSwap(chainName, log, swapUSD) {
   const amounts = decodeAmounts(log.data)
   if (!amounts) return
 
-  // Track DEX price for CEX-DEX comparison
-  const prices = JSON.parse(getConfig('prices')||'{}')
-  const impliedPrice = Number(amounts.abs0) / Number(amounts.abs1) * 1e12 // USDC/WETH
-  if (impliedPrice > 100 && impliedPrice < 100000) {
+  const impliedPrice = Number(amounts.abs0) / Number(amounts.abs1) * 1e12
+  if (impliedPrice > 100 && impliedPrice < 100000)
     setConfig(`dex_price_${chainName}`, impliedPrice.toFixed(2))
-  }
 
-  // Trigger zero-seed bootstrap if not yet deployed
   onMegaSwapDetected().catch(() => {})
 
   const baseOpp = {
@@ -138,23 +130,17 @@ async function onMegaSwap(chainName, log, swapUSD) {
     profitEst: swapUSD * 0.0003
   }
 
-  // Run through propeller engine (Layer 0)
   const amplified = await processPropellers(chainName, baseOpp)
   const { tokenIn, tokenOut, amountIn, buyFee, sellFee, profitEst } = amplified
-
   if (profitEst < chain.minProfit) return
 
   const calldata = encodeFunctionData({ abi:ARB_ABI, functionName:'dexArb',
     args:[tokenIn, tokenOut, amountIn, buyFee, sellFee, BigInt(Math.floor(profitEst*0.3*1e6))]
   })
 
-  // SV-4: primary backrun
   await execute(chainName, 'sv4', calldata, profitEst)
-
-  // SV-1: velocity arb on same gap
   await execute(chainName, 'sv1', calldata, profitEst * 0.6)
 
-  // P2: cascade — fire on all related pools
   const cascades = await p2Cascade(chainName, profitEst)
   for (const opp of cascades) {
     const cData = encodeFunctionData({ abi:ARB_ABI, functionName:'dexArb',
@@ -163,7 +149,6 @@ async function onMegaSwap(chainName, log, swapUSD) {
     await execute(chainName, 'sv2', cData, opp.profitUSD)
   }
 
-  // P9: multi-chain simultaneous
   await p9MultiChain({ swapUSD, buyFee, sellFee }, async (otherChain) => {
     const oc = getChain(otherChain)
     if (!oc?.weth || !oc?.usdc || otherChain === chainName) return null
@@ -174,7 +159,6 @@ async function onMegaSwap(chainName, log, swapUSD) {
   })
 }
 
-// ── POOL WATCHERS ─────────────────────────────────────────────────────────────
 const MEGA_POOLS = {
   ethereum: [
     '0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640',
@@ -210,7 +194,7 @@ function watchChain(chainName) {
     await onMegaSwap(chainName, log, swapUSD)
   })
 
-  if (pools.length) console.log(`[VAULTS] ${chainName}: watching ${pools.length} mega-pools`)
+  console.log(`[VAULTS] ${chainName}: watching ${pools.length} mega-pools`)
 }
 
 async function periodicArb(chainName) {
@@ -245,19 +229,16 @@ async function stableArb(chainName) {
 export function startVaults() {
   console.log('[VAULTS] 10 SVs · 5,000 instances · $100M+ targets')
 
-  // Restore saved stats
   try {
     const saved = getConfig('sv_stats')
     if (saved) Object.assign(_sv, JSON.parse(saved))
   } catch {}
 
-  // Watch pools on all chains
   getActiveChains().forEach(c => watchChain(c.name))
 
-  // Periodic arbs: T1 every 2s, T2 every 5s, T3 every 15s
   ;[1,2,3].forEach(tier => {
-    const chains  = getTierChains(tier)
-    const interval= { 1:2000, 2:5000, 3:15000 }[tier]
+    const chains   = getTierChains(tier)
+    const interval = { 1:2000, 2:5000, 3:15000 }[tier]
     setInterval(async () => {
       for (const c of chains) {
         await periodicArb(c.name).catch(() => {})
@@ -267,8 +248,6 @@ export function startVaults() {
     }, interval)
   })
 
-  // Save SV stats every 30s
   setInterval(() => setConfig('sv_stats', JSON.stringify(_sv)), 30000)
-
   console.log(`[VAULTS] Live on ${getActiveChains().length} chains`)
 }
