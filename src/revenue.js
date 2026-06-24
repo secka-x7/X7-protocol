@@ -10,7 +10,7 @@
 //
 // NON-COMPRESSIBLE FLOOR: $97,100/day even if ALL MEV = $0
 
-import { encodeFunctionData, parseAbi, keccak256, toBytes } from 'viem'
+import { encodeFunctionData, parseAbi } from 'viem'
 import { getConfig, setConfig, recordExecution } from './db.js'
 import { getChain, getActiveChains } from './chains.js'
 import { getContractAddr } from './pimlico.js'
@@ -44,7 +44,6 @@ export function getStreamStats() {
 }
 
 export function getNonMevFloor() {
-  // Minimum daily revenue from non-MEV streams (conservative estimates)
   return {
     orderFlow:  83000,
     cexDex:     10000,
@@ -55,25 +54,20 @@ export function getNonMevFloor() {
 }
 
 // ── STREAM 1: ORDER FLOW CAPTURE ─────────────────────────────────────────────
-// Users submit signed swap intents → X7-SV executes as solver → captures margin
-
 export async function processOrder(order) {
   const { chainName, tokenIn, tokenOut, amountIn, minAmountOut, deadline, signature } = order
 
-  if (!amountIn || !tokenIn || !tokenOut || !chainName) {
+  if (!amountIn || !tokenIn || !tokenOut || !chainName)
     return { error: 'Missing required order fields' }
-  }
 
-  if (Date.now() / 1000 > (deadline || 0)) {
+  if (Date.now() / 1000 > (deadline || 0))
     return { error: 'Order expired' }
-  }
 
   const chain = getChain(chainName)
   const addr  = getContractAddr(chainName)
   if (!chain || !addr) return { error: 'Chain not ready: ' + chainName }
 
-  // Solver margin (P8) — 10bps default on order amount
-  const orderUSD = Number(BigInt(amountIn)) / 1e6 // assuming USDC input
+  const orderUSD = Number(BigInt(amountIn)) / 1e6
   const margin   = p8SolverMargin(orderUSD)
 
   console.log(`[REVENUE:S1] Order $${orderUSD.toFixed(0)} → $${margin.toFixed(2)} margin`)
@@ -89,11 +83,9 @@ export async function processOrder(order) {
 
     recordStream('orderFlow', margin)
     recordExecution({ txHash, chain:chainName, protocol:'solver', profitUsdc:margin, status:'success' })
-    const totalOrders = parseInt(getConfig('solver_orders')||'0') + 1
-    setConfig('solver_orders', String(totalOrders))
+    setConfig('solver_orders',  String(parseInt(getConfig('solver_orders')||'0') + 1))
     setConfig('solver_revenue', (_streams.orderFlow.total).toFixed(2))
 
-    console.log(`[REVENUE:S1] Filled: $${margin.toFixed(2)} margin · tx=${String(txHash).slice(0,12)}`)
     return { success:true, txHash, margin, solverRevenue:_streams.orderFlow.total }
   } catch(e) {
     return { error: e.message?.slice(0,100) }
@@ -102,24 +94,22 @@ export async function processOrder(order) {
 
 export function getSolverStats() {
   return {
-    revenue: _streams.orderFlow.total,
-    orders:  _streams.orderFlow.count,
+    revenue:   _streams.orderFlow.total,
+    orders:    _streams.orderFlow.count,
     marginBps: parseInt(getConfig('solver_margin_bps')||'10')
   }
 }
 
 // ── STREAM 2: LP VAULT ───────────────────────────────────────────────────────
-// 50% of MEV profits deploy as concentrated LP — earns fees + enables triple MEV
-
 export function getLPVaultBalance() {
   return parseFloat(getConfig('lp_vault_total')||'0')
 }
 
+// Named export only here — NOT re-exported at bottom (was causing duplicate)
 export function depositToLPVault(amount) {
-  const current = getLPVaultBalance()
-  const newTotal = current + amount * 0.5 // 50% of profits → LP
+  const current  = getLPVaultBalance()
+  const newTotal = current + amount * 0.5
   setConfig('lp_vault_total', newTotal.toFixed(2))
-  // Projected daily yield at 15% APY
   const dailyYield = newTotal * 0.15 / 365
   recordStream('lpVault', dailyYield)
   console.log(`[REVENUE:S2] LP vault: $${newTotal.toFixed(0)} deployed · $${dailyYield.toFixed(2)}/day yield`)
@@ -127,29 +117,26 @@ export function depositToLPVault(amount) {
 }
 
 // ── STREAM 3: CEX-DEX LATENCY ARB ────────────────────────────────────────────
-// Physics-based gap: CEX updates 50ms, DEX updates 12,000ms — permanent
-
 export async function processCEXDEXGap(chainName, cexPrice, dexPrice, symbol) {
   const gapPct = Math.abs(cexPrice - dexPrice) / dexPrice * 100
-  if (gapPct < 0.05) return null // Below threshold
+  if (gapPct < 0.05) return null
 
   const chain = getChain(chainName)
   const addr  = getContractAddr(chainName)
   if (!chain || !addr) return null
 
-  // Position size from LP vault (larger vault = larger position)
-  const lpBal    = getLPVaultBalance()
-  const positionUSD = Math.min(lpBal * 0.1, 1000000) // Max 10% of vault, $1M cap
-  const profitEst   = gapPct * positionUSD / 100
-
+  const lpBal      = getLPVaultBalance()
+  const positionUSD= Math.min(lpBal * 0.1, 1000000)
+  const profitEst  = gapPct * positionUSD / 100
   if (profitEst < 50) return null
 
   console.log(`[REVENUE:S3] CEX-DEX gap ${symbol}: ${gapPct.toFixed(3)}% on ${chainName} → $${profitEst.toFixed(0)}`)
 
-  // Pre-position on DEX at stale price (arb bots are our exit liquidity)
   const tokenIn  = cexPrice > dexPrice ? chain.usdc : chain.weth
   const tokenOut = cexPrice > dexPrice ? chain.weth : chain.usdc
-  const amountIn = BigInt(Math.floor(positionUSD * (cexPrice > dexPrice ? 1e6 : 1e18/Number(JSON.parse(getConfig('prices')||'{}').ETH||3000))))
+  const amountIn = BigInt(Math.floor(
+    positionUSD * (cexPrice > dexPrice ? 1e6 : 1e18 / Number(JSON.parse(getConfig('prices')||'{}').ETH||3000))
+  ))
 
   const calldata = encodeFunctionData({ abi:ARB_ABI, functionName:'dexArb',
     args:[tokenIn, tokenOut, amountIn, 500, 3000, BigInt(Math.floor(profitEst*0.3*1e6))]
@@ -159,7 +146,6 @@ export async function processCEXDEXGap(chainName, cexPrice, dexPrice, symbol) {
     const { executeBundle } = await import('./builders.js')
     const txHash = await executeBundle(chainName, addr, calldata, profitEst)
     if (!txHash) return null
-
     recordStream('cexDex', profitEst)
     recordExecution({ txHash, chain:chainName, protocol:'cex_dex', profitUsdc:profitEst, status:'success' })
     return profitEst
@@ -167,8 +153,6 @@ export async function processCEXDEXGap(chainName, cexPrice, dexPrice, symbol) {
 }
 
 // ── STREAM 4: STABLECOIN DEPEG ───────────────────────────────────────────────
-// Flash loan powered — zero price risk (both assets are dollar-pegged)
-
 const STABLES = {
   ethereum: {
     USDC: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
@@ -201,35 +185,30 @@ async function getStablePrice(chainName, tokenAddr, referenceAddr, quoterAddr) {
 }
 
 export async function scanDepeg(chainName) {
-  const chain  = getChain(chainName)
-  const stables= STABLES[chainName]
+  const chain   = getChain(chainName)
+  const stables = STABLES[chainName]
   if (!chain?.quoter || !chain?.usdc || !stables) return
 
   for (const [symbol, addr] of Object.entries(stables)) {
-    if (addr === chain.usdc) continue // skip reference
+    if (addr === chain.usdc) continue
     try {
       const price     = await getStablePrice(chainName, addr, chain.usdc, chain.quoter)
       const deviation = Math.abs(1 - price) * 100
-
       setConfig(`depeg_${chainName}_${symbol}`, deviation.toFixed(4))
 
       if (deviation >= 0.05) {
         console.log(`[REVENUE:S4] ${symbol} depeg on ${chainName}: ${deviation.toFixed(3)}%`)
         emit('depeg_detected', { chain:chainName, symbol, deviation, price })
-
-        // Trigger P13 for profit estimation
         const profitEst = await p13Depeg(chainName, symbol, deviation)
-
         if (profitEst && profitEst > 100) {
-          // Execute: flash loan stronger stable, buy depegged, sell at par
-          const addr2   = getContractAddr(chainName)
-          if (!addr2) continue
-          const amountIn = BigInt(Math.floor(1000000e6)) // $1M flash
+          const contractAddr = getContractAddr(chainName)
+          if (!contractAddr) continue
+          const amountIn = BigInt(Math.floor(1000000e6))
           const calldata = encodeFunctionData({ abi:ARB_ABI, functionName:'dexArb',
             args:[chain.usdc, addr, amountIn, 100, 500, BigInt(Math.floor(profitEst*0.3*1e6))]
           })
           const { executeBundle } = await import('./builders.js')
-          const txHash = await executeBundle(chainName, addr2, calldata, profitEst)
+          const txHash = await executeBundle(chainName, contractAddr, calldata, profitEst)
           if (txHash) {
             recordStream('depeg', profitEst)
             recordExecution({ txHash, chain:chainName, protocol:'depeg', profitUsdc:profitEst, status:'success' })
@@ -242,8 +221,6 @@ export async function scanDepeg(chainName) {
 }
 
 // ── STREAM 5: GOVERNANCE FRONT-RUNNER ────────────────────────────────────────
-// Monitor protocol governance — position before market reacts to proposals
-
 const GOV_CONTRACTS = {
   compound: { addr:'0xc0Da02939E1441F497fd74F78cE7Decb17B66529', chain:'ethereum' },
   aave:     { addr:'0x9AEE0B04504CeF83A65AC3f0e838D0593BCb2BC7', chain:'ethereum' },
@@ -257,34 +234,26 @@ const PROPOSAL_EXECUTED_TOPIC = '0x712ae1383f79ac853f8d882153778e0260ef8f03b504e
 async function checkGovernance() {
   for (const [protocol, info] of Object.entries(GOV_CONTRACTS)) {
     try {
-      const block   = await rpcCall(info.chain, 'eth_blockNumber', [])
-      const blockN  = parseInt(block, 16)
-      const fromB   = '0x' + Math.max(0, blockN - 10).toString(16)
-      const logs    = await rpcCall(info.chain, 'eth_getLogs', [{
-        address:   info.addr,
-        topics:    [PROPOSAL_EXECUTED_TOPIC],
-        fromBlock: fromB,
-        toBlock:   'latest'
+      const block  = await rpcCall(info.chain, 'eth_blockNumber', [])
+      const blockN = parseInt(block, 16)
+      const fromB  = '0x' + Math.max(0, blockN - 10).toString(16)
+      const logs   = await rpcCall(info.chain, 'eth_getLogs', [{
+        address: info.addr, topics:[PROPOSAL_EXECUTED_TOPIC],
+        fromBlock: fromB, toBlock: 'latest'
       }])
-
       if (!logs?.length) continue
-
       for (const log of logs) {
         console.log(`[REVENUE:S5] Governance event: ${protocol}`)
-        // Estimate price impact (conservative 0.5% on $1M)
-        const priceImpact = 0.5
-        const profitEst   = p12Governance(protocol, priceImpact)
-
+        const profitEst = p12Governance(protocol, 0.5)
         if (profitEst > 100) {
           const chain = getChain(info.chain)
-          const addr  = getContractAddr(info.chain)
-          if (!chain?.usdc || !chain?.weth || !addr) continue
-
+          const contractAddr = getContractAddr(info.chain)
+          if (!chain?.usdc || !chain?.weth || !contractAddr) continue
           const calldata = encodeFunctionData({ abi:ARB_ABI, functionName:'dexArb',
             args:[chain.usdc, chain.weth, BigInt(Math.floor(1000000e6)), 500, 3000, BigInt(Math.floor(profitEst*0.3*1e6))]
           })
           const { executeBundle } = await import('./builders.js')
-          const txHash = await executeBundle(info.chain, addr, calldata, profitEst)
+          const txHash = await executeBundle(info.chain, contractAddr, calldata, profitEst)
           if (txHash) {
             recordStream('governance', profitEst)
             recordExecution({ txHash, chain:info.chain, protocol:'governance_'+protocol, profitUsdc:profitEst, status:'success' })
@@ -297,43 +266,28 @@ async function checkGovernance() {
 }
 
 // ── STREAM 6: INTENT PROTOCOL MONITORING ─────────────────────────────────────
-// CoW Protocol + UniswapX + 1inch Fusion — batch settlement front-running
-
 const INTENT_ENDPOINTS = {
-  cow:      'https://api.cow.fi/mainnet/api/v1/auction',
-  uniswapx: 'https://api.uniswap.org/v2/orders?orderStatus=open&chainId=1&limit=10',
+  cow: 'https://api.cow.fi/mainnet/api/v1/auction',
 }
 
 async function scanIntents() {
-  // CoW Protocol batch scan
   try {
     const r = await fetch(INTENT_ENDPOINTS.cow, { signal: AbortSignal.timeout(5000) })
-    if (r.ok) {
-      const data = await r.json()
-      const orders = data?.orders || []
-
-      // Find large orders ($1M+)
-      for (const order of orders) {
-        const sellAmt = parseFloat(order.sellAmount||'0') / 1e6
-        if (sellAmt < 1000000) continue
-
-        console.log(`[REVENUE:S6] CoW batch: $${(sellAmt/1e6).toFixed(1)}M order`)
-        const profitEst = sellAmt * 0.0005
-
-        // Fire P7 intent front-runner
-        await p7Intent('ethereum', {
-          tokenIn:     order.sellToken,
-          tokenOut:    order.buyToken,
-          totalAmount: sellAmt
-        })
-
-        recordStream('intent', profitEst)
-      }
+    if (!r.ok) return
+    const data   = await r.json()
+    const orders = data?.orders || []
+    for (const order of orders) {
+      const sellAmt = parseFloat(order.sellAmount||'0') / 1e6
+      if (sellAmt < 1000000) continue
+      console.log(`[REVENUE:S6] CoW batch: $${(sellAmt/1e6).toFixed(1)}M order`)
+      const profitEst = sellAmt * 0.0005
+      await p7Intent('ethereum', { tokenIn:order.sellToken, tokenOut:order.buyToken, totalAmount:sellAmt })
+      recordStream('intent', profitEst)
     }
   } catch {}
 }
 
-// ── STABLECOIN PEG MONITOR ────────────────────────────────────────────────────
+// ── DEPEG LOOP ────────────────────────────────────────────────────────────────
 let _depegScanning = false
 async function depegLoop() {
   if (_depegScanning) return
@@ -350,31 +304,23 @@ async function depegLoop() {
 export function startRevenue() {
   console.log('[REVENUE] Architecture 2: 6 non-MEV streams starting...')
 
-  // Stream 2: LP vault — update yield every 5 minutes
+  // S2: LP vault yield tick — every 5 minutes
   setInterval(() => {
     const total = parseFloat(getConfig('sv_total')||'0')
-    if (total > 100) depositToLPVault(total * 0.01) // 1% of running total each tick
+    if (total > 100) depositToLPVault(total * 0.01)
   }, 300000)
 
-  // Stream 4: Depeg scanner — every 30 seconds
+  // S4: Depeg scanner — every 30 seconds
   setInterval(() => depegLoop().catch(() => {}), 30000)
-  setTimeout(() => depegLoop().catch(() => {}), 5000) // First scan at T+5s
+  setTimeout(()  => depegLoop().catch(() => {}), 5000)
 
-  // Stream 5: Governance — every 2 minutes
+  // S5: Governance — every 2 minutes
   setInterval(() => checkGovernance().catch(() => {}), 120000)
 
-  // Stream 6: Intent protocols — every 15 seconds
+  // S6: Intent protocols — every 15 seconds
   setInterval(() => scanIntents().catch(() => {}), 15000)
-  setTimeout(() => scanIntents().catch(() => {}), 10000)
+  setTimeout(()  => scanIntents().catch(() => {}), 10000)
 
-  console.log('[REVENUE] Streams active:')
-  console.log('  S1: Order Flow  (POST /api/order)')
-  console.log('  S2: LP Vault    (auto-deploy from MEV profits)')
-  console.log('  S3: CEX-DEX     (triggered by cexfeed.js)')
-  console.log('  S4: Depeg Hunt  (every 30s, all chains)')
-  console.log('  S5: Governance  (every 2min, 5 protocols)')
-  console.log('  S6: Intent      (every 15s, CoW + UniswapX)')
+  console.log('[REVENUE] S1:OrderFlow S2:LPVault S3:CEX-DEX S4:Depeg S5:Gov S6:Intent')
   console.log('[REVENUE] Non-MEV floor: $97,100/day minimum')
 }
-
-export { processCEXDEXGap, depositToLPVault }
